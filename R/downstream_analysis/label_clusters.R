@@ -28,9 +28,9 @@ cluster_labels <- c(
   "16" = "Astrocytes",
   "17" = "Neutrophils",
   "18" = "T cells / NK cells",
-  "19" = "Endothelial (vascular)",
+  "19" = "Endothelial (Pecam1/Sox17-high)",
   "20" = "Homeostatic microglia",
-  "21" = "Endothelial (vascular)",
+  "21" = "Endothelial (Kdr/Mmrn2-high)",
   "22" = "Low-quality"
 )
 
