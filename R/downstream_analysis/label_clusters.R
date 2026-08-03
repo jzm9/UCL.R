@@ -34,7 +34,7 @@ cluster_labels <- c(
   "22" = "Low-quality"
 )
 
-merged$cell_type <- factor(cluster_labels[as.character(merged$seurat_clusters)],
+merged$cell_type <- factor(unname(cluster_labels[as.character(merged$seurat_clusters)]),
                             levels = unique(cluster_labels))
 
 # Broad tumour vs TME flag, useful as a sanity check against CopyKAT's is_tumour
