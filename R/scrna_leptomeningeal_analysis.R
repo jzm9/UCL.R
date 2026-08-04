@@ -226,8 +226,21 @@ avg_by_sample <- AverageExpression(tumour_met_prim, features = angio_genes_prese
                                     group.by = c("sample", "condition"),
                                     assays = "SCT", layer = "data")$SCT
 
+# Drop genes with zero variance across samples (undetected, or identical in
+# every sample) - scale="row" divides by SD, so these become NaN/Inf and
+# make pheatmap render a blank page instead of erroring.
+heatmap_mat <- log1p(as.matrix(avg_by_sample))
+row_sd <- apply(heatmap_mat, 1, sd)
+heatmap_mat <- heatmap_mat[is.finite(row_sd) & row_sd > 0, , drop = FALSE]
+message(nrow(heatmap_mat), " / ", nrow(avg_by_sample),
+        " angiogenesis genes have non-zero variance and will be plotted")
+
 pdf(file.path(data_dir, "heatmap_angiogenesis_genes.pdf"), width = 10, height = 12)
-pheatmap::pheatmap(log1p(avg_by_sample), scale = "row", show_rownames = TRUE)
+if (nrow(heatmap_mat) >= 2) {
+  pheatmap::pheatmap(heatmap_mat, scale = "row", show_rownames = TRUE)
+} else {
+  message("Fewer than 2 genes with variance - skipping heatmap")
+}
 dev.off()
 
 # Key genes, plotted individually with tryCatch since not all are present /
