@@ -155,6 +155,7 @@ copykat_preds <- lapply(tumour_samples, function(samp) {
     rawmat          = raw,
     norm.cell.names = normal_barcodes,
     id.type         = "S",
+    genome          = "mm10",
     ngene.chr       = 5,
     win.size        = 25,
     KS.cut          = 0.1,
