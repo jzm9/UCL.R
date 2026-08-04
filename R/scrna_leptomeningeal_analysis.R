@@ -186,6 +186,11 @@ dev.off()
 
 # ── 7. Subset to tumour cells ─────────────────────────────────────────────────
 tumour <- subset(merged, subset = is_tumour == TRUE)
+
+# Save the full all-cells object here, before freeing it - step 13 previously
+# tried to saveRDS(merged, ...) after rm(merged), which fails with
+# "object 'merged' not found".
+saveRDS(merged, file.path(data_dir, "seurat_all_cells_integrated.rds"))
 rm(merged); gc()  # free the full merged object now that tumour subset is done
 
 tumour <- SCTransform(tumour, vars.to.regress = "pct_mt",
@@ -420,7 +425,8 @@ print(p1 | p2)
 dev.off()
 
 # ── 13. Save Seurat objects ───────────────────────────────────────────────────
-saveRDS(merged, file.path(data_dir, "seurat_all_cells_integrated.rds"))
+# seurat_all_cells_integrated.rds was already saved in step 7, before `merged`
+# was freed from memory.
 saveRDS(tumour, file.path(data_dir, "seurat_tumour_cells.rds"))
 
 message("\n=== Analysis complete ===")
