@@ -247,7 +247,6 @@ tumour_met_prim <- subset(tumour, subset = condition %in% c("LPT_MET", "Primary"
 pseudobulk <- AggregateExpression(tumour_met_prim,
   group.by = c("sample", "condition", "patient"),
   assays    = "RNA",
-  layer     = "counts",
   return.seurat = TRUE
 )
 
