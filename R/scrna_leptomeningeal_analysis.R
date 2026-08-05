@@ -5,7 +5,7 @@
 # ── 0. Install / load packages ────────────────────────────────────────────────
 packages <- c(
   "Seurat", "harmony", "ggplot2", "dplyr", "patchwork",
-  "msigdbr",
+  "msigdbr", "DESeq2",
   "fgsea", "ggrepel", "viridis", "ComplexHeatmap",
   "Matrix", "BiocParallel", "glmGamPoi"
 )
