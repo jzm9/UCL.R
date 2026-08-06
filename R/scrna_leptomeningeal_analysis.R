@@ -251,10 +251,17 @@ pseudobulk <- AggregateExpression(tumour_met_prim,
 )
 
 Idents(pseudobulk) <- "condition"
+# Seurat replaces underscores with dashes in identity class labels
+# (e.g. "LPT_MET" -> "LPT-MET"), so look up the actual sanitised levels
+# rather than hardcoding the original condition strings.
+ident_levels <- levels(Idents(pseudobulk))
+ident_met     <- grep("MET", ident_levels, value = TRUE)
+ident_primary <- grep("Primary", ident_levels, value = TRUE)
+
 de_results <- FindMarkers(
   pseudobulk,
-  ident.1    = "LPT_MET",
-  ident.2    = "Primary",
+  ident.1    = ident_met,
+  ident.2    = ident_primary,
   test.use   = "DESeq2",
   min.pct    = 0.1,
   logfc.threshold = 0
