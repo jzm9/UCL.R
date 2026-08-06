@@ -23,6 +23,54 @@ from GSM-specific matrix/features/barcodes files, `CreateSeuratObject` with
 `min.cells = 3, min.features = 200`, then filtered per-sample on
 `nFeature_RNA` (200–6000), `nCount_RNA` (>500), and `pct_mt` (<20%).
 
+```r
+samples <- data.frame(
+  gsm        = c("GSM8216129", "GSM8216130", "GSM8216131",
+                 "GSM8216132", "GSM8216133", "GSM8216134",
+                 "GSM8216135", "GSM8216136", "GSM8216137",
+                 "GSM8216138", "GSM8216139"),
+  label      = c("LPT_MET_1", "Primary_1", "LPT_WT_1",
+                 "LPT_MET_2", "Primary_2", "LPT_WT_2",
+                 "LPT_MET_3", "Primary_3", "LPT_WT_3",
+                 "LPT_MET_4", "Primary_4"),
+  condition  = c("LPT_MET", "Primary", "LPT_WT",
+                 "LPT_MET", "Primary", "LPT_WT",
+                 "LPT_MET", "Primary", "LPT_WT",
+                 "LPT_MET", "Primary"),
+  patient    = c(1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4),
+  stringsAsFactors = FALSE
+)
+
+seurat_list <- lapply(seq_len(nrow(samples)), function(i) {
+  s   <- samples[i, ]
+  mtx <- ReadMtx(
+    mtx      = file.path(data_dir, paste0(s$gsm, "_", s$label, "_matrix.mtx")),
+    features = file.path(data_dir, paste0(s$gsm, "_", s$label, "_features.tsv")),
+    cells    = file.path(data_dir, paste0(s$gsm, "_", s$label, "_barcodes.tsv"))
+  )
+  obj <- CreateSeuratObject(counts = mtx, project = s$label, min.cells = 3, min.features = 200)
+  obj$sample    <- s$label
+  obj$condition <- s$condition
+  obj$patient   <- s$patient
+  obj
+})
+names(seurat_list) <- samples$label
+
+seurat_list <- lapply(seurat_list, function(obj) {
+  obj[["pct_mt"]] <- PercentageFeatureSet(obj, pattern = "^MT-|^mt-")
+  obj
+})
+
+seurat_list <- lapply(seurat_list, function(obj) {
+  subset(obj,
+    subset = nFeature_RNA > 200 &
+             nFeature_RNA < 6000 &
+             nCount_RNA   > 500  &
+             pct_mt       < 20
+  )
+})
+```
+
 **Justification:** Per-sample filtering (rather than filtering after
 merging) is correct practice — QC thresholds should account for
 sample-to-sample technical variation, and filtering pre-merge avoids one
@@ -48,6 +96,16 @@ capture batches.
 **What was done:** `SCTransform(vars.to.regress = "pct_mt", variable.features.n = 3000)`
 run **per sample**, before merging. Samples downsampled to a max of 5000
 cells before normalisation, for memory reasons on the HPC node.
+
+```r
+max_cells <- 5000
+seurat_list <- lapply(seurat_list, function(obj) {
+  if (ncol(obj) > max_cells) obj <- obj[, sample(colnames(obj), max_cells)]
+  obj <- SCTransform(obj, vars.to.regress = "pct_mt",
+                     variable.features.n = 3000, verbose = FALSE)
+  obj
+})
+```
 
 **Justification:** SCTransform's regularized negative binomial regression is
 current best practice over log-normalisation + scaling for UMI-based
@@ -85,6 +143,37 @@ cap in a rare cell type. Not disclosed/quantified anywhere in the outputs
 `FindNeighbors`/`FindClusters` on the harmony-corrected embedding using 30
 PCs and `resolution = 0.5` for the all-cells object (0.4/20 PCs for the
 tumour-only re-clustering).
+
+```r
+merged <- merge(seurat_list[[1]], y = seurat_list[-1],
+                add.cell.ids = names(seurat_list))
+rm(seurat_list); gc()
+
+DefaultAssay(merged) <- "SCT"
+VariableFeatures(merged) <- rownames(merged[["SCT"]]@scale.data)
+merged <- RunPCA(merged, npcs = 50)
+
+merged <- RunHarmony(merged, group.by.vars = "sample", max_iter = 20)
+merged <- RunUMAP(merged, reduction = "harmony", dims = 1:30)
+merged <- FindNeighbors(merged, reduction = "harmony", dims = 1:30)
+merged <- FindClusters(merged, resolution = 0.5)
+```
+
+The tumour-only object is re-normalised and re-integrated from scratch after
+subsetting (§4/§7), using the same pattern with `dims = 1:20` and
+`resolution = 0.4`:
+
+```r
+tumour <- SCTransform(tumour, vars.to.regress = "pct_mt",
+                      variable.features.n = 3000, verbose = FALSE)
+DefaultAssay(tumour) <- "SCT"
+VariableFeatures(tumour) <- rownames(tumour[["SCT"]]@scale.data)
+tumour <- RunPCA(tumour, npcs = 50)
+tumour <- RunHarmony(tumour, group.by.vars = "sample", max_iter = 20)
+tumour <- RunUMAP(tumour, reduction = "harmony", dims = 1:20)
+tumour <- FindNeighbors(tumour, reduction = "harmony", dims = 1:20)
+tumour <- FindClusters(tumour, resolution = 0.4)
+```
 
 **Justification:** Harmony is a well-validated, commonly-used integration
 method for this scale of dataset (11 samples, tens of thousands of cells)
@@ -128,15 +217,67 @@ composition, "which cell types expand in MET").
    to harmonise per-sample SCT models — required in Seurat v5 when multiple
    samples each carry their own SCT model, otherwise `FindMarkers`/
    `FindAllMarkers` throws an "unequal library sizes" error).
+
+   ```r
+   Idents(merged) <- "seurat_clusters"
+   merged <- PrepSCTFindMarkers(merged)
+   all_markers <- FindAllMarkers(merged, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+   write.csv(all_markers, "all_cells_cluster_markers_full.csv", row.names = FALSE)
+
+   top10 <- all_markers %>% group_by(cluster) %>% slice_max(order_by = avg_log2FC, n = 10)
+   write.csv(top10, "all_cells_cluster_markers_top10.csv", row.names = FALSE)
+   ```
+
 2. Top-10 markers per cluster (by `avg_log2FC`) inspected manually.
 3. Identities assigned by matching marker genes to literature/canonical
-   cell-type markers, by eye, cluster by cluster (`R/downstream_analysis/label_clusters.R`).
+   cell-type markers, by eye, cluster by cluster, then applied to the object
+   as a lookup table (`R/downstream_analysis/label_clusters.R`):
+
+   ```r
+   cluster_labels <- c(
+     "0"  = "Tumour",
+     "1"  = "Tumour",
+     "2"  = "Smooth muscle",
+     "3"  = "Tumour (S/G2M-phase)",
+     "4"  = "Tumour (S/G2M-phase)",
+     "5"  = "Pericytes",
+     "6"  = "Tumour (S/G2M-phase)",
+     "7"  = "Oligodendrocyte-like/glia",
+     "8"  = "BBB endothelial",
+     "9"  = "Schwann cells",
+     "10" = "Fibroblasts",
+     "11" = "Inflammatory macrophages/monocytes",
+     "12" = "Microglia/macrophages",
+     "13" = "Schwann cells",
+     "14" = "Sex-linked/technical",
+     "15" = "Tumour (stress/IEG state)",
+     "16" = "Astrocytes",
+     "17" = "Neutrophils",
+     "18" = "T cells / NK cells",
+     "19" = "Endothelial (Pecam1/Sox17-high)",
+     "20" = "Homeostatic microglia",
+     "21" = "Endothelial (Kdr/Mmrn2-high)",
+     "22" = "Low-quality"
+   )
+
+   # unname() is required here: cluster_labels[as.character(...)] returns a
+   # *named* vector (names = cluster IDs), and Seurat's `$<-` interprets a
+   # named vector as needing name-based matching against cell barcodes,
+   # which fails with "No cell overlap between new meta data and Seurat
+   # object" if left named. unname() restores plain positional assignment.
+   merged$cell_type <- factor(unname(cluster_labels[as.character(merged$seurat_clusters)]),
+                               levels = unique(cluster_labels))
+
+   merged$compartment <- ifelse(grepl("^Tumour", merged$cell_type), "Tumour", "TME")
+   ```
+
 4. Adjacent/overlapping identities (e.g. clusters 19 and 21, both initially
    labelled "Endothelial (vascular)") were revisited once their actual
    top-10 marker sets were checked: 19 is defined by `Pecam1`/`Sox17`
    (canonical pan-endothelial), 21 by `Kdr`/`Mmrn2`/`Bvht`/`Ch25h` — non-
-   overlapping gene sets, split into separate labels rather than merged,
-   since collapsing them would have hidden a real subpopulation distinction.
+   overlapping gene sets, split into separate labels rather than merged
+   (reflected in the `cluster_labels` table above), since collapsing them
+   would have hidden a real subpopulation distinction.
 
 ### 4.2 Is this best practice?
 
@@ -226,6 +367,45 @@ without this argument every gene fails coordinate annotation, producing an
 Cells called `aneuploid` and drawn from an LPT_MET/Primary sample are
 labelled tumour.
 
+```r
+normal_barcodes <- WhichCells(merged, expression = condition == "LPT_WT")
+tumour_samples  <- unique(merged$sample[merged$condition %in% c("LPT_MET", "Primary")])
+
+copykat_preds <- lapply(tumour_samples, function(samp) {
+  cells_in_sample <- WhichCells(merged, expression = sample == samp)
+  cells_to_use    <- c(cells_in_sample, normal_barcodes)
+  raw             <- as.matrix(GetAssayData(merged, layer = "counts")[, cells_to_use])
+
+  out_dir <- file.path(data_dir, paste0("copykat_", samp))
+  dir.create(out_dir, showWarnings = FALSE)
+  old_wd <- getwd(); setwd(out_dir)
+
+  ck <- copykat(
+    rawmat          = raw,
+    norm.cell.names = normal_barcodes,
+    id.type         = "S",
+    genome          = "mm10",   # required for mouse - defaults to human hg20 otherwise,
+                                 # which causes an "all cells are filtered" error since no
+                                 # mouse gene symbol maps to a chromosome coordinate
+    ngene.chr       = 5,
+    win.size        = 25,
+    KS.cut          = 0.1,
+    sam.name        = samp,
+    distance        = "euclidean",
+    n.cores         = 8
+  )
+  setwd(old_wd)
+  ck$prediction
+})
+
+all_preds <- do.call(rbind, copykat_preds)
+merged$copykat_pred <- NA
+merged$copykat_pred[match(all_preds$cell.names, colnames(merged))] <- all_preds$copykat.pred
+
+merged$is_tumour <- merged$copykat_pred == "aneuploid" &
+                    merged$condition %in% c("LPT_MET", "Primary")
+```
+
 **Justification:** Using genuine non-tumour tissue from the same
 anatomical/experimental context (LPT_WT) as the CopyKAT normal reference is
 the correct approach — it's a much stronger reference than CopyKAT's default
@@ -284,6 +464,30 @@ paired test (rather than trying to force it into a three-group paired
 design it doesn't fit) is the right call, since it has no patient-matched
 partner.
 
+```r
+props <- merged@meta.data %>%
+  filter(condition %in% c("LPT_MET", "Primary")) %>%
+  count(patient, condition, cell_type) %>%
+  group_by(patient, condition) %>%
+  mutate(prop = n / sum(n)) %>%
+  ungroup()
+
+prop_wide <- props %>%
+  select(patient, condition, cell_type, prop) %>%
+  tidyr::pivot_wider(names_from = condition, values_from = prop, values_fill = 0)
+
+cell_type_prop_test <- prop_wide %>%
+  group_by(cell_type) %>%
+  summarise(
+    mean_MET     = mean(LPT_MET, na.rm = TRUE),
+    mean_Primary = mean(Primary, na.rm = TRUE),
+    p_value      = tryCatch(wilcox.test(LPT_MET, Primary, paired = TRUE)$p.value,
+                             error = function(e) NA_real_),
+    .groups = "drop"
+  ) %>%
+  arrange(p_value)
+```
+
 **Caveats:**
 
 - **Compositional-data problem, acknowledged but not corrected for.**
@@ -322,6 +526,36 @@ partner.
 sample/condition/patient (pseudobulk), then `FindMarkers(test.use = "DESeq2")`
 comparing LPT_MET vs Primary pseudo-samples (n=4 vs n=4, tumour cells only).
 
+```r
+DefaultAssay(tumour) <- "RNA"
+tumour_met_prim <- subset(tumour, subset = condition %in% c("LPT_MET", "Primary"))
+
+pseudobulk <- AggregateExpression(tumour_met_prim,
+  group.by = c("sample", "condition", "patient"),
+  assays    = "RNA",
+  return.seurat = TRUE
+)
+
+Idents(pseudobulk) <- "condition"
+# Seurat replaces underscores with dashes in identity class labels
+# (e.g. "LPT_MET" -> "LPT-MET"), so look up the actual sanitised levels
+# rather than hardcoding the original condition strings - hardcoding
+# "LPT_MET" here previously failed with "Cannot find the following
+# identities in the object: LPT_MET".
+ident_levels  <- levels(Idents(pseudobulk))
+ident_met     <- grep("MET", ident_levels, value = TRUE)
+ident_primary <- grep("Primary", ident_levels, value = TRUE)
+
+de_results <- FindMarkers(
+  pseudobulk,
+  ident.1    = ident_met,
+  ident.2    = ident_primary,
+  test.use   = "DESeq2",
+  min.pct    = 0.1,
+  logfc.threshold = 0
+)
+```
+
 **Justification:** Pseudobulk aggregation before DESeq2 is correct and
 current best practice for scRNA-seq DE testing between conditions —
 testing directly on single-cell-level pseudo-replicates (treating each cell
@@ -357,6 +591,43 @@ implementation; combining Hallmark/KEGG/Reactome is reasonable pathway
 coverage. Ranking by a combined effect-size/significance metric (rather
 than log2FC alone) is a defensible choice that down-weights large but
 noisy fold-changes.
+
+```r
+de_results$rank_metric <- de_results$avg_log2FC * -log10(de_results$p_val + 1e-300)
+ranked <- setNames(de_results$rank_metric, de_results$gene)
+ranked <- sort(ranked, decreasing = TRUE)
+
+hallmark <- msigdbr(species = "Mus musculus", category = "H") %>%
+  dplyr::select(gs_name, gene_symbol) %>%
+  split(x = .$gene_symbol, f = .$gs_name)
+kegg <- msigdbr(species = "Mus musculus", category = "C2", subcategory = "CP:KEGG") %>%
+  dplyr::select(gs_name, gene_symbol) %>%
+  split(x = .$gene_symbol, f = .$gs_name)
+reactome <- msigdbr(species = "Mus musculus", category = "C2", subcategory = "CP:REACTOME") %>%
+  dplyr::select(gs_name, gene_symbol) %>%
+  split(x = .$gene_symbol, f = .$gs_name)
+all_genesets <- c(hallmark, kegg, reactome)
+
+set.seed(42)
+gsea_res <- fgsea(pathways = all_genesets, stats = ranked,
+                   minSize = 10, maxSize = 500, nPermSimple = 10000)
+
+# Focused angiogenesis follow-up: keyword filter over the unbiased GSEA result
+angio_sets <- grep("ANGIOGEN|VEGF|NOTCH|HIF|HYPOXIA|VESSEL|VASCULO",
+                   names(all_genesets), value = TRUE, ignore.case = TRUE)
+angio_gsea <- gsea_res[gsea_res$pathway %in% angio_sets, ]
+
+core_angio_genes <- unique(unlist(all_genesets[angio_sets]))
+core_angio_genes <- core_angio_genes[core_angio_genes %in% rownames(tumour)]
+avg_expr <- AverageExpression(tumour_met_prim, features = core_angio_genes,
+                               group.by = "sample", layer = "data")$RNA
+avg_z <- t(scale(t(avg_expr)))
+
+hallmark_angio <- all_genesets[["HALLMARK_ANGIOGENESIS"]]
+hallmark_angio <- hallmark_angio[hallmark_angio %in% rownames(tumour)]
+tumour <- AddModuleScore(tumour, features = list(hallmark_angio),
+                          name = "angio_score", ctrl = 100)
+```
 
 **Caveats:**
 
