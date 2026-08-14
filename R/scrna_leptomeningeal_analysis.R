@@ -302,15 +302,18 @@ ranked <- setNames(de_results$rank_metric, de_results$gene)
 ranked <- sort(ranked, decreasing = TRUE)
 
 # MSigDB gene sets: Hallmark + KEGG
-hallmark <- msigdbr(species = "Mus musculus", category = "H") %>%
+# msigdbr >= v10 renamed category/subcategory to collection/subcollection,
+# and renamed the KEGG legacy subcollection code from "CP:KEGG" to
+# "CP:KEGG_LEGACY" - the old names now throw "Unknown subcollection".
+hallmark <- msigdbr(species = "Mus musculus", db_species = "MM", collection = "H") %>%
   dplyr::select(gs_name, gene_symbol) %>%
   split(x = .$gene_symbol, f = .$gs_name)
 
-kegg <- msigdbr(species = "Mus musculus", category = "C2", subcategory = "CP:KEGG") %>%
+kegg <- msigdbr(species = "Mus musculus", db_species = "MM", collection = "C2", subcollection = "CP:KEGG_LEGACY") %>%
   dplyr::select(gs_name, gene_symbol) %>%
   split(x = .$gene_symbol, f = .$gs_name)
 
-reactome <- msigdbr(species = "Mus musculus", category = "C2", subcategory = "CP:REACTOME") %>%
+reactome <- msigdbr(species = "Mus musculus", db_species = "MM", collection = "C2", subcollection = "CP:REACTOME") %>%
   dplyr::select(gs_name, gene_symbol) %>%
   split(x = .$gene_symbol, f = .$gs_name)
 
