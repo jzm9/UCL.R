@@ -305,15 +305,19 @@ ranked <- sort(ranked, decreasing = TRUE)
 # msigdbr >= v10 renamed category/subcategory to collection/subcollection,
 # and renamed the KEGG legacy subcollection code from "CP:KEGG" to
 # "CP:KEGG_LEGACY" - the old names now throw "Unknown subcollection".
-hallmark <- msigdbr(species = "Mus musculus", db_species = "MM", collection = "H") %>%
+# With db_species = "MM" (mouse-native gene sets, rather than human sets
+# ortholog-mapped to mouse), collection codes also change prefix: Hallmark
+# is "MH" instead of "H", and the C2 curated collection is "M2" instead of
+# "C2" - using the human-prefixed codes here throws "Unknown collection".
+hallmark <- msigdbr(species = "Mus musculus", db_species = "MM", collection = "MH") %>%
   dplyr::select(gs_name, gene_symbol) %>%
   split(x = .$gene_symbol, f = .$gs_name)
 
-kegg <- msigdbr(species = "Mus musculus", db_species = "MM", collection = "C2", subcollection = "CP:KEGG_LEGACY") %>%
+kegg <- msigdbr(species = "Mus musculus", db_species = "MM", collection = "M2", subcollection = "CP:KEGG_LEGACY") %>%
   dplyr::select(gs_name, gene_symbol) %>%
   split(x = .$gene_symbol, f = .$gs_name)
 
-reactome <- msigdbr(species = "Mus musculus", db_species = "MM", collection = "C2", subcollection = "CP:REACTOME") %>%
+reactome <- msigdbr(species = "Mus musculus", db_species = "MM", collection = "M2", subcollection = "CP:REACTOME") %>%
   dplyr::select(gs_name, gene_symbol) %>%
   split(x = .$gene_symbol, f = .$gs_name)
 
