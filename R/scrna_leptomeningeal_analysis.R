@@ -301,27 +301,60 @@ de_results$rank_metric <- de_results$avg_log2FC * -log10(de_results$p_val + 1e-3
 ranked <- setNames(de_results$rank_metric, de_results$gene)
 ranked <- sort(ranked, decreasing = TRUE)
 
-# MSigDB gene sets: Hallmark + KEGG
-# msigdbr >= v10 renamed category/subcategory to collection/subcollection,
-# and renamed the KEGG legacy subcollection code from "CP:KEGG" to
-# "CP:KEGG_LEGACY" - the old names now throw "Unknown subcollection".
-# With db_species = "MM" (mouse-native gene sets, rather than human sets
-# ortholog-mapped to mouse), collection codes also change prefix: Hallmark
-# is "MH" instead of "H", and the C2 curated collection is "M2" instead of
-# "C2" - using the human-prefixed codes here throws "Unknown collection".
-hallmark <- msigdbr(species = "Mus musculus", db_species = "MM", collection = "MH") %>%
-  dplyr::select(gs_name, gene_symbol) %>%
-  split(x = .$gene_symbol, f = .$gs_name)
+# MSigDB gene sets: Hallmark + KEGG + Reactome
+# msigdbr's collection/subcollection codes have proven brittle across
+# versions/species on this cluster (category/subcategory renamed to
+# collection/subcollection in v10+; collection prefixes change under
+# db_species = "MM"; some subcollections, e.g. KEGG, may not exist at all
+# under the mouse-native database due to licensing). Rather than hardcode
+# one guessed-correct combination and have the whole GSEA step die on a
+# single miss, load each candidate defensively and skip/warn on failure -
+# whatever succeeds is used; the run no longer crashes on a naming mismatch.
+load_geneset <- function(...) {
+  tryCatch({
+    msigdbr(...) %>%
+      dplyr::select(gs_name, gene_symbol) %>%
+      split(x = .$gene_symbol, f = .$gs_name)
+  }, error = function(e) {
+    message("Skipping gene set (", paste(c(...), collapse = "/"), "): ", conditionMessage(e))
+    list()
+  })
+}
 
-kegg <- msigdbr(species = "Mus musculus", db_species = "MM", collection = "M2", subcollection = "CP:KEGG_LEGACY") %>%
-  dplyr::select(gs_name, gene_symbol) %>%
-  split(x = .$gene_symbol, f = .$gs_name)
+# Each entry tries the mouse-native (MM) database first, falling back to
+# the ortholog-mapped human database (its own H/C2 code prefix) only if
+# the mouse-native call returns nothing - so a successful mouse-native load
+# is never silently overwritten by the fallback.
+geneset_groups <- list(
+  hallmark = list(
+    list(species = "Mus musculus", db_species = "MM", collection = "MH"),
+    list(species = "Mus musculus", collection = "H")
+  ),
+  kegg = list(
+    list(species = "Mus musculus", db_species = "MM", collection = "M2", subcollection = "CP:KEGG_LEGACY"),
+    list(species = "Mus musculus", collection = "C2", subcollection = "CP:KEGG_LEGACY")
+  ),
+  reactome = list(
+    list(species = "Mus musculus", db_species = "MM", collection = "M2", subcollection = "CP:REACTOME"),
+    list(species = "Mus musculus", collection = "C2", subcollection = "CP:REACTOME")
+  )
+)
 
-reactome <- msigdbr(species = "Mus musculus", db_species = "MM", collection = "M2", subcollection = "CP:REACTOME") %>%
-  dplyr::select(gs_name, gene_symbol) %>%
-  split(x = .$gene_symbol, f = .$gs_name)
+all_genesets <- list()
+for (group_name in names(geneset_groups)) {
+  for (spec in geneset_groups[[group_name]]) {
+    gs <- do.call(load_geneset, spec)
+    if (length(gs) > 0) {
+      all_genesets <- modifyList(all_genesets, gs)
+      break  # this group succeeded - don't try its fallback
+    }
+  }
+}
 
-all_genesets <- c(hallmark, kegg, reactome)
+if (length(all_genesets) == 0) {
+  stop("No MSigDB gene sets could be loaded under any collection/subcollection combination tried - check msigdbr_collections() on this system.")
+}
+message(length(all_genesets), " MSigDB gene sets loaded for GSEA")
 
 set.seed(42)
 gsea_res <- fgsea(
