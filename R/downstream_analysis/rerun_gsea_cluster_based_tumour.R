@@ -117,7 +117,7 @@ angio_sets <- grep("ANGIOGEN|VEGF|NOTCH|HIF|HYPOXIA|VESSEL|VASCULO",
 angio_gsea <- gsea_res[gsea_res$pathway %in% angio_sets, ]
 write.csv(angio_gsea[, -8], file.path(data_dir, "GSEA_angiogenesis_pathways_clusterTumour.csv"), row.names = FALSE)
 
-print(angio_gsea[, c("pathway", "NES", "padj")], n = 30)
+print(as.data.frame(angio_gsea[, c("pathway", "NES", "padj")]))
 
 # ── 5. Compare against the CopyKAT-based results, if you have that CSV too ──
 copykat_de_path <- file.path(data_dir, "DE_LPT_MET_vs_Primary.csv")
