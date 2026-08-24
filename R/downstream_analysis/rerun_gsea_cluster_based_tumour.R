@@ -1,14 +1,15 @@
 # ── Re-run pseudobulk DE + GSEA using a cluster-defined tumour population ────
 # Replaces CopyKAT's `is_tumour` call entirely with a manual cluster-based
-# tumour definition (clusters 0, 1, 3, 4, 6, 14, 15 from the all-cells UMAP,
+# tumour definition (clusters 0, 1, 3, 4, 6, 15 from the all-cells UMAP,
 # resolution 0.5), motivated by CopyKAT's ~14% TME contamination rate found
 # via marker-gene cross-check earlier in this project.
 #
-# NOTE: cluster 14 was previously labelled "Sex-linked/technical" in
-# label_clusters.R based on its real top markers (Xist/Tsix but also
-# Gria2/Kcnq1ot1/Miat - a mixed signature, not clean tumour markers).
-# Worth re-checking cluster 14's markers before trusting it here; if it
-# turns out not to be tumour, just remove "14" from tumour_clusters below.
+# Cluster 14 was deliberately excluded: its real top-10 markers (Tsix,
+# Gm26917, Gria2, Miat, Gm42418, Xist, Kcnq1ot1, Sacs, C130071C03Rik, Nav2)
+# contain no tumour-lineage marker (no Neurod1/Atoh1/Barhl1/Cntn2), are
+# dominated by sex-chromosome/imprinted lncRNAs, and include Gm42418 - a
+# high-expression but non-specific rRNA-repeat transcript that's a common
+# technical-artifact signature in mouse scRNA-seq, not a real marker.
 #
 # Runs entirely locally - no HPC/Myriad needed. Requires: Seurat, dplyr,
 # ggplot2, DESeq2, fgsea, msigdbr installed locally.
@@ -25,7 +26,7 @@ data_dir <- "."  # change to your local folder holding the downloaded files
 merged <- readRDS(file.path(data_dir, "seurat_all_cells_integrated.rds"))
 
 # ── 1. Define tumour cells by cluster, not by CopyKAT ────────────────────────
-tumour_clusters <- c(0, 1, 3, 4, 6, 14, 15)
+tumour_clusters <- c(0, 1, 3, 4, 6, 15)
 tumour <- subset(merged, subset = seurat_clusters %in% tumour_clusters)
 rm(merged); gc()
 
