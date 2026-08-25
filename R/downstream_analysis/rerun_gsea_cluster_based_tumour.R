@@ -127,3 +127,76 @@ if (file.exists(copykat_de_path)) {
   write.csv(merged_de, file.path(data_dir, "DE_comparison_clusterTumour_vs_copykat.csv"), row.names = FALSE)
   message("Wrote side-by-side comparison to DE_comparison_clusterTumour_vs_copykat.csv")
 }
+
+# ── 6. Genome-wide top-pathways plot (not restricted to angiogenesis) ───────
+# Mirrors GSEA_top_pathways.pdf from the main Myriad pipeline, but for this
+# cluster-defined-tumour result. Useful for presenting the whole-transcriptome
+# signal (e.g. HALLMARK_TNFA_SIGNALING_VIA_NFKB, the translation/ribosome/
+# OXPHOS cluster) rather than only the angiogenesis-filtered subset.
+top_paths <- rbind(
+  head(gsea_res[gsea_res$padj < 0.05 & gsea_res$NES > 0, ], 15),
+  head(gsea_res[gsea_res$padj < 0.05 & gsea_res$NES < 0, ], 15)
+)
+if (nrow(top_paths) > 0) {
+  top_paths$pathway_short <- gsub("HALLMARK_|KEGG_|REACTOME_", "", top_paths$pathway)
+  top_paths$pathway_short <- substr(top_paths$pathway_short, 1, 55)
+  top_paths$direction <- ifelse(top_paths$NES > 0, "Up in MET", "Up in Primary")
+
+  pdf(file.path(data_dir, "GSEA_top_pathways_clusterTumour.pdf"), width = 11, height = 10)
+  print(
+    ggplot(top_paths, aes(x = NES, y = reorder(pathway_short, NES), fill = direction)) +
+      geom_col() +
+      scale_fill_manual(values = c("Up in MET" = "#E63946", "Up in Primary" = "#457B9D")) +
+      geom_vline(xintercept = 0, colour = "black") +
+      labs(x = "Normalised Enrichment Score", y = NULL,
+           title = "GSEA: LPT_MET vs Primary (cluster-defined tumour, all significant pathways)") +
+      theme_classic() + theme(legend.title = element_blank())
+  )
+  dev.off()
+  message("Wrote GSEA_top_pathways_clusterTumour.pdf (", nrow(top_paths), " significant pathways, padj < 0.05)")
+} else {
+  message("No pathways reached padj < 0.05 - skipping top-pathways plot")
+}
+
+# ── 7. Sequencing-depth QC: rule out a technical confound before trusting ───
+# the translation/ribosome/OXPHOS GSEA signal. A large, coordinated shift in
+# ribosomal/mitochondrial-translation gene sets is a classic signature of a
+# per-sample sequencing-depth or RNA-quality difference, not necessarily real
+# biology - check nCount_RNA/nFeature_RNA by condition before presenting it.
+depth_by_sample <- tumour_met_prim@meta.data %>%
+  group_by(sample, condition, patient) %>%
+  summarise(
+    median_nCount   = median(nCount_RNA),
+    median_nFeature = median(nFeature_RNA),
+    n_cells         = n(),
+    .groups = "drop"
+  )
+print(as.data.frame(depth_by_sample))
+write.csv(depth_by_sample, file.path(data_dir, "sequencing_depth_by_sample_clusterTumour.csv"), row.names = FALSE)
+
+depth_test <- function(metric) {
+  wide <- depth_by_sample %>%
+    select(patient, condition, !!metric) %>%
+    tidyr::pivot_wider(names_from = condition, values_from = !!metric)
+  tryCatch(wilcox.test(wide$LPT_MET, wide$Primary, paired = TRUE)$p.value,
+           error = function(e) NA_real_)
+}
+message("Paired Wilcoxon, MET vs Primary - median nCount_RNA per sample: p = ",
+        round(depth_test("median_nCount"), 4))
+message("Paired Wilcoxon, MET vs Primary - median nFeature_RNA per sample: p = ",
+        round(depth_test("median_nFeature"), 4))
+
+pdf(file.path(data_dir, "sequencing_depth_by_condition_clusterTumour.pdf"), width = 8, height = 5)
+print(
+  ggplot(depth_by_sample, aes(x = condition, y = median_nCount, fill = condition)) +
+    geom_boxplot() + geom_point(position = position_jitter(width = 0.1)) +
+    theme_classic() + labs(title = "Median nCount_RNA per sample, by condition")
+)
+print(
+  ggplot(depth_by_sample, aes(x = condition, y = median_nFeature, fill = condition)) +
+    geom_boxplot() + geom_point(position = position_jitter(width = 0.1)) +
+    theme_classic() + labs(title = "Median nFeature_RNA per sample, by condition")
+)
+dev.off()
+message("Wrote sequencing_depth_by_condition_clusterTumour.pdf - check whether MET/Primary differ",
+        " in depth before trusting the translation/ribosome/OXPHOS GSEA signal")
