@@ -41,6 +41,27 @@ are gene symbols with no `#`), and for a fixed allowlist of 15 fields
 relapse, rna_id, status, subgroup, tumorid`) captures that row's values
 (skipping the first two columns, which are just the repeated tag name).
 
+```python
+# scripts/01_build_metadata.py, lines 10-26
+fields = ["age", "death", "gender", "group", "histo", "id", "mstage",
+          "new.cnv", "new.mut", "pfs", "relapse", "rna_id", "status",
+          "subgroup", "tumorid"]
+
+rows = {}
+with open(META_FILE) as f:
+    for line in f:
+        if not line.startswith("#"):
+            continue
+        parts = line.rstrip("\n").split("\t")
+        tag = parts[0].lstrip("#")
+        if tag in fields:
+            rows[tag] = parts[2:]  # skip "#tag" and repeated tag col
+
+meta = pd.DataFrame(rows)
+meta["sample_id"] = meta["rna_id"].str.upper()
+meta = meta.set_index("sample_id")
+```
+
 Each kept row becomes one column of a `pandas.DataFrame` — i.e. the
 DataFrame ends up **samples × metadata-fields**, indexed by
 `sample_id = rna_id.upper()` (R2 stores IDs lowercase, e.g. `mb103998`; the
@@ -62,10 +83,22 @@ ground-truth integer read counts we can normalize ourselves in a way that's
 documented and auditable (§2).
 
 **Sanity check:** the script's last four lines diff the metadata's
-`sample_id` set against the counts file's column-header set. Both directions
-came back empty — **all 86 samples in both files match exactly**, case
-differences aside — which is what let us trust the join for everything
-downstream.
+`sample_id` set against the counts file's column-header set:
+
+```python
+# scripts/01_build_metadata.py, lines 35-41
+# sanity check against counts file header
+with open(COUNTS_FILE) as f:
+    header = f.readline().rstrip("\n").split("\t")
+counts_ids = set(header)
+meta_ids = set(meta.index)
+print("in counts not meta:", counts_ids - meta_ids)
+print("in meta not counts:", meta_ids - counts_ids)
+```
+
+Both directions came back empty — **all 86 samples in both files match
+exactly**, case differences aside — which is what let us trust the join for
+everything downstream.
 
 **Output:** `results/sample_metadata.csv`, 86 rows x 15 columns, indexed by
 sample ID.
@@ -89,10 +122,21 @@ per-gene stats script (a known, documented discrepancy — see §6).
 
 **What it does:**
 
-```
-libsize   = sum of each sample's column (total reads for that sample)
-cpm       = counts / libsize * 1e6                    (counts per million)
-logcpm    = log2(cpm + 1)
+```python
+# scripts/02_load_counts.py, lines 10-22
+counts = pd.read_csv(COUNTS_FILE, sep="\t", index_col=0)
+print("counts shape:", counts.shape)
+
+genes_of_interest = ["LRG1", "CD74", "MIF", "EMILIN3", "ENG", "ITGB1", "PTK2"]
+for g in genes_of_interest:
+    print(g, "present:", g in counts.index)
+
+# CPM + log2 normalization (library-size normalized, standard for raw RNA-seq counts)
+libsize = counts.sum(axis=0)
+cpm = counts.div(libsize, axis=1) * 1e6
+logcpm = np.log2(cpm + 1)
+
+logcpm.to_csv(f"{OUT_DIR}/logcpm_matrix.csv")
 ```
 
 This is standard **library-size normalization** (CPM), then a log2 transform
@@ -118,9 +162,27 @@ keep a local copy alongside the raw counts.
 
 This is the core per-gene analysis for the 7 requested genes.
 
-**Composite angiogenesis score:** each of the 7 genes' logCPM values is
-z-scored across the *whole* cohort (`(x - mean) / sd`, all 86 samples), then
-the 7 z-scores are averaged per sample. This gives one number per sample
+**Composite angiogenesis score:**
+
+```python
+# scripts/03_analyze_genes.py, lines 12-23
+genes = ["LRG1", "CD74", "MIF", "EMILIN3", "ENG", "ITGB1", "PTK2"]
+gene_label = {"PTK2": "PTK2 (FAK)", "ENG": "ENG (Endoglin)"}
+
+group_map = {"shh": "SHH-MB", "group_3": "Group 3 MB", "group_4": "Group 4 MB"}
+group_order = ["group_3", "group_4", "shh"]  # Group 3 first (most important)
+
+expr = logcpm.loc[genes].T  # samples x genes
+expr = expr.join(meta[["group", "status", "tumorid"]])
+
+# z-score each gene across the whole cohort (for the composite angiogenesis score)
+z = (logcpm.loc[genes].T - logcpm.loc[genes].T.mean()) / logcpm.loc[genes].T.std()
+expr["angio_score"] = z.mean(axis=1)
+```
+
+Each of the 7 genes' logCPM values is z-scored across the *whole* cohort
+(`(x - mean) / sd`, all 86 samples), then the 7 z-scores are averaged per
+sample. This gives one number per sample
 that goes up when a sample tends to have high LRG1/CD74/.../PTK2 relative to
 the cohort, and down when it tends to have low values across the panel. It's
 a simple, transparent composite, not a formal gene-set score (contrast with
@@ -131,6 +193,47 @@ caveat in §6).
 
 **Pairing and statistics, per subgroup:**
 
+```python
+# scripts/03_analyze_genes.py, lines 28-62
+for grp in group_order:
+    sub = expr[expr["group"] == grp]
+    pivot_prim = sub[sub["status"] == "prim"].set_index("tumorid")
+    pivot_recur = sub[sub["status"] == "recur"].set_index("tumorid")
+    common = pivot_prim.index.intersection(pivot_recur.index)
+    n_pairs = len(common)
+
+    for gene in genes + ["angio_score"]:
+        p_vals = pivot_prim.loc[common, gene].values
+        r_vals = pivot_recur.loc[common, gene].values
+        diff = r_vals - p_vals
+        if n_pairs >= 2 and np.any(diff != 0):
+            wstat, wp = stats.wilcoxon(p_vals, r_vals)
+        else:
+            wp = np.nan
+        tstat, tp = stats.ttest_rel(p_vals, r_vals) if n_pairs >= 2 else (np.nan, np.nan)
+
+        records.append({
+            "group": group_map[grp],
+            "gene": gene,
+            "n_pairs": n_pairs,
+            "median_primary": np.median(p_vals),
+            "median_relapse": np.median(r_vals),
+            "log2FC_relapse_vs_primary": np.median(diff),
+            "n_increased_at_relapse": int(np.sum(diff > 0)),
+            "n_decreased_at_relapse": int(np.sum(diff < 0)),
+            "paired_ttest_p": tp,
+            "wilcoxon_p": wp,
+        })
+
+        paired_data.setdefault(grp, {})[gene] = {
+            "tumorid": list(common),
+            "primary": p_vals.tolist(),
+            "relapse": r_vals.tolist(),
+        }
+```
+
+Step by step:
+
 1. Filter to samples in that `group` (`shh` / `group_3` / `group_4`).
 2. Split into `prim` and `recur`, each indexed by `tumorid`.
 3. Take the **intersection** of tumorids present in both — i.e. only
@@ -139,7 +242,9 @@ caveat in §6).
    - `scipy.stats.wilcoxon(primary_values, relapse_values)` — the paired
      **Wilcoxon signed-rank test**. This is a non-parametric test on the
      paired differences; it doesn't assume the differences are normally
-     distributed, which matters with as few as 5 pairs (Group 3 MB).
+     distributed, which matters with as few as 5 pairs (Group 3 MB). Guarded
+     against `n_pairs < 2` and against the all-zero-differences edge case
+     (which `scipy.stats.wilcoxon` raises on).
    - `scipy.stats.ttest_rel(...)` — the paired **t-test**, reported
      alongside as a parametric cross-check, but Wilcoxon is the primary
      number reported (more defensible at this sample size).
@@ -184,20 +289,84 @@ self-contained):
 
 **Paired slope charts** (`make_panel`): for a given (gene, subgroup), draws
 one dot per sample at x=Primary or x=Relapse, at a y-position scaled to that
-gene's log2CPM range *within that panel* (so each small panel uses its own
-y-axis — panels are not comparable to each other by eye on absolute height,
-only by their own primary→relapse slope and the printed p-value). A line
-connects each patient's primary dot to their relapse dot; the line is
-colored orange if relapse > primary for that patient, muted blue otherwise —
-so you can see the up/down split at a glance before reading the stats table.
-Group 3 MB panels get a highlighted border (`highlight=True`) since that's
-the subgroup of most interest.
+gene's log2CPM range *within that panel*. The y-scale and the line coloring
+are the core of it:
+
+```python
+# scripts/04_make_report.py, lines 41-60
+    all_vals = np.concatenate([prim, recur])
+    ymin, ymax = all_vals.min(), all_vals.max()
+    span = ymax - ymin
+    if span == 0:
+        span = 1
+    ymin -= span * 0.15
+    ymax += span * 0.15
+
+    def y(v):
+        return PAD_T + INNER_H - (v - ymin) / (ymax - ymin) * INNER_H
+
+    lines = []
+    for pv, rv in zip(prim, recur):
+        yp, yr = y(pv), y(rv)
+        up = yr < yp
+        color = "var(--series-2)" if up else "var(--series-1-muted)"
+        lines.append(
+            f'<line x1="{X0}" y1="{yp:.1f}" x2="{X1}" y2="{yr:.1f}" '
+            f'stroke="{color}" stroke-width="1.4" opacity="0.75"/>'
+        )
+```
+
+Each small panel uses its own y-axis (`ymin`/`ymax` recomputed per gene x
+subgroup, padded 15% for breathing room) — panels are not comparable to each
+other by eye on absolute height, only by their own primary→relapse slope and
+the printed p-value. A line connects each patient's primary dot to their
+relapse dot; the line is colored orange (`--series-2`) if relapse > primary
+for that patient (note `yr < yp` because SVG y grows downward), muted blue
+(`--series-1-muted`) otherwise — so you can see the up/down split at a
+glance before reading the stats table. Group 3 MB panels get a highlighted
+border (`highlight=True`) since that's the subgroup of most interest:
+
+```python
+# scripts/04_make_report.py, lines 89-94
+for gene in genes + ["angio_score"]:
+    label = "Composite angiogenesis-gene score (mean z-score)" if gene == "angio_score" else f'{gene_label.get(gene, gene)}'
+    panels = "".join(
+        make_panel(gene, grp, highlight=(grp == "group_3"))
+        for grp in group_order
+    )
+```
 
 **GSEA bar chart**: one horizontal bar per (subgroup, gene set), bar length
 = NES (normalized enrichment score, see §5), color = gene set identity
 (3-color categorical palette), full opacity if FDR q-value < 0.05, faded
-otherwise. A vertical zero-line anchors the bars so direction (toward
-primary vs. toward relapse) is visually obvious.
+otherwise:
+
+```python
+# scripts/04_make_report.py, lines 127-144
+for grp in grp_display_order:
+    bars.append(f'<text x="4" y="{y - 6}" class="gsea-group-label">{grp}</text>')
+    for i, term in enumerate(term_order):
+        row = gsea_df[(gsea_df["group"] == grp) & (gsea_df["Term"] == term)]
+        if row.empty:
+            y += row_h
+            continue
+        r = row.iloc[0]
+        nes = r["NES"]
+        fdr = r["FDR q-val"]
+        bx = x_scale(min(nes, 0))
+        bw = abs(x_scale(nes) - zero_x)
+        sig = fdr < 0.05
+        opacity = "1" if sig else "0.45"
+        bars.append(
+            f'<rect x="{bx:.1f}" y="{y-9:.1f}" width="{bw:.1f}" height="14" rx="3" '
+            f'fill="{series_colors[i]}" opacity="{opacity}"/>'
+        )
+```
+
+Bars are drawn from the zero-line outward in whichever direction `nes` sign
+points (`bx = x_scale(min(nes, 0))` picks the left edge whether `nes` is
+positive or negative), so a vertical zero-line anchors all of them and
+direction (toward primary vs. toward relapse) is visually obvious.
 
 **Design-system notes:** color roles and CSS custom properties follow the
 `dataviz` skill's palette (`--series-1/2/3`, validated with
@@ -234,13 +403,24 @@ Independent repos landing on byte-identical content for a file with the
 official release name is strong circumstantial evidence it's an unmodified
 copy of the real Broad Institute release, not a hand-edited approximation —
 this is the basis for calling `HALLMARK_ANGIOGENESIS` (extracted from that
-file) "verified" rather than "curated." It's 36 genes:
+file) "verified" rather than "curated." As it's actually hardcoded in the
+script (all three gene sets are, since none could be downloaded at runtime):
 
-```
-VCAN, POSTN, FSTL1, LRPAP1, STC1, LPL, VEGFA, PF4, THBD, FGFR1, TNFRSF21,
-CCND2, COL5A2, ITGAV, SERPINA5, KCNJ8, APP, JAG1, COL3A1, SPP1, NRP1, OLR1,
-PDGFA, PTK2, SLCO2A1, PGLYRP1, VAV2, S100A4, MSX1, VTN, TIMP1, APOH, PRG2,
-JAG2, LUM, CXCL6
+```python
+# scripts/05_gsea.py, lines 15-27
+HALLMARK_ANGIOGENESIS = ["VCAN", "POSTN", "FSTL1", "LRPAP1", "STC1", "LPL", "VEGFA", "PF4",
+    "THBD", "FGFR1", "TNFRSF21", "CCND2", "COL5A2", "ITGAV", "SERPINA5", "KCNJ8", "APP",
+    "JAG1", "COL3A1", "SPP1", "NRP1", "OLR1", "PDGFA", "PTK2", "SLCO2A1", "PGLYRP1", "VAV2",
+    "S100A4", "MSX1", "VTN", "TIMP1", "APOH", "PRG2", "JAG2", "LUM", "CXCL6"]
+
+CURATED_ANGIOGENESIS_SUPPLEMENTARY = ["VEGFA", "VEGFB", "VEGFC", "VEGFD", "KDR", "FLT1",
+    "FLT4", "NRP1", "NRP2", "PDGFA", "PDGFB", "FGF1", "FGF2", "ANGPT1", "ANGPT2", "TEK",
+    "TIE1", "THBS1", "SERPINE1", "MMP2", "MMP9", "TIMP1", "TIMP2", "TIMP3", "COL18A1",
+    "COL4A2", "SPP1", "VTN", "ITGAV", "ITGB3", "CDH5", "PECAM1", "MCAM", "VCAM1", "SELP",
+    "CXCL8", "CXCL12", "CCL2", "LPL", "PLAU", "PLAUR", "NOS3", "HIF1A", "EPAS1", "ACVRL1",
+    "ENG", "TGFBR1", "SMAD4", "EFNB2", "EPHB4", "ROBO4"]
+
+USER_PANEL = ["LRG1", "CD74", "MIF", "EMILIN3", "ENG", "ITGB1", "PTK2"]
 ```
 
 A second attempt was made to find the GO Biological Process term
@@ -266,16 +446,42 @@ a unit can be compared against the two more general sets.
 the 2 patients whose tumor switched Group 4 → Group 3 between primary and
 relapse. This script fixes that: it first pairs samples **globally by
 `tumorid`** (ignoring `group` entirely), then decides which subgroup bucket
-each *pair* belongs to using **the primary sample's `group` label**. This
-recovers all 43 pairs with none dropped — Group 4 MB ends up with the
+each *pair* belongs to using **the primary sample's `group` label**:
+
+```python
+# scripts/05_gsea.py, lines 47-58
+prim_all = meta[meta["status"] == "prim"]
+recur_all = meta[meta["status"] == "recur"]
+pair_group = prim_all.set_index("tumorid")["group"]
+
+all_results = []
+for grp in group_order:
+    tumorids = pair_group[pair_group == grp].index
+    prim_sub = prim_all[prim_all["tumorid"].isin(tumorids)].sort_values("tumorid")
+    recur_sub = recur_all[recur_all["tumorid"].isin(tumorids)].sort_values("tumorid")
+    prim_ids = prim_sub.index
+    recur_ids = recur_sub.index
+    assert (prim_sub["tumorid"].values == recur_sub["tumorid"].values).all()
+```
+
+This recovers all 43 pairs with none dropped — Group 4 MB ends up with the
 correct n=14 (not n=12 as in script 03's output) and Group 3 MB is
 unaffected here (its "extra" pair going *out* to Group 4's relapse-only side
-is exactly cancelled by pairing on the primary side). An `assert` confirms
+is exactly cancelled by pairing on the primary side). The `assert` confirms
 every bucketed pair's primary and relapse rows share the same `tumorid`
-before any stats are computed, so a silent mismatch would fail loudly rather
+(after both are independently `sort_values("tumorid")`-ed, so row *i* of
+`prim_sub` and row *i* of `recur_sub` are guaranteed to be the same patient)
+before any stats are computed — a silent mismatch would fail loudly rather
 than produce wrong numbers quietly.
 
 ### 5c. Expression filtering
+
+```python
+# scripts/05_gsea.py, lines 39-41
+expressed = logcpm.index[logcpm.mean(axis=1) > 1]
+logcpm_f = logcpm.loc[expressed]
+print(f"genes after expression filter: {logcpm_f.shape[0]} / {logcpm.shape[0]}")
+```
 
 Before ranking, genes are filtered to `mean(logCPM) > 1` across all 86
 samples (≈ mean CPM > 1) — 16,225 of the original 55,765 genes survive. This
@@ -292,10 +498,23 @@ For each subgroup, for every surviving gene: a **paired t-statistic** is
 computed by hand (not via `scipy.stats.ttest_rel`, for speed across 16k
 genes at once — but it's the same formula):
 
+```python
+# scripts/05_gsea.py, lines 60-68 (inside `for grp in group_order:`)
+    p = logcpm_f[prim_ids].values
+    r = logcpm_f[recur_ids].values
+    diff = r - p
+    n = diff.shape[1]
+    mean_diff = diff.mean(axis=1)
+    sd_diff = diff.std(axis=1, ddof=1)
+    sd_diff[sd_diff == 0] = np.nan
+    tstat = mean_diff / (sd_diff / np.sqrt(n))
+    rnk = pd.Series(tstat, index=logcpm_f.index).dropna().sort_values(ascending=False)
 ```
-diff      = relapse_logCPM - primary_logCPM   (per patient)
-tstat     = mean(diff) / (sd(diff) / sqrt(n))
-```
+
+(`sd_diff == 0 -> NaN` guards genes with zero variance in their paired
+differences, e.g. identical values across every patient, which would
+otherwise divide by zero; `.dropna()` then drops those genes from the
+ranking entirely rather than assigning them a spurious infinite t-stat.)
 
 Genes are ranked by this signed t-statistic, most-positive (consistently up
 at relapse) at the top, most-negative (consistently up at primary) at the
@@ -307,6 +526,22 @@ original paper used limma with patient-pair blocking to call its DEGs).
 
 `gseapy.prerank` (a Python port of the Broad's GSEA algorithm) is then run
 against the three gene sets simultaneously, per subgroup:
+
+```python
+# scripts/05_gsea.py, lines 72-82 (inside `for grp in group_order:`)
+    pre_res = gp.prerank(
+        rnk=rnk,
+        gene_sets=gene_sets,
+        min_size=3,
+        max_size=2000,
+        permutation_num=1000,
+        outdir=None,
+        seed=42,
+        verbose=False,
+    )
+    res = pre_res.res2d.copy()
+```
+
 - `min_size=3, max_size=2000` — a gene set needs at least 3 of its genes
   present in the ranked list to be scored at all (relevant for
   `USER_ANGIOGENESIS_PANEL` after filtering — it still clears this easily).
@@ -314,6 +549,9 @@ against the three gene sets simultaneously, per subgroup:
   built from 1000 gene-set permutations (this is the standard GSEA
   permutation-based significance test, not a parametric approximation).
 - `seed=42` — fixed for reproducibility of the permutation-based p-values.
+- `outdir=None` — keeps `gseapy` from writing its own plots/report files to
+  disk; only the in-memory `res2d` table is kept and written out ourselves
+  as `gsea_angiogenesis_results.csv`.
 
 **Output per (subgroup, gene set):** `NES` (normalized enrichment score —
 positive means the gene set's members skew toward the "up at relapse" end of
