@@ -1,0 +1,982 @@
+<title>Angiogenesis in Relapsed Medulloblastoma: Methods</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper:        #f5f6f2;
+  --panel:        #ffffff;
+  --ink:          #161d19;
+  --ink-muted:    #4c554e;
+  --ink-faint:    #838d84;
+  --border:       #dde0d7;
+  --border-soft:  #e8eae3;
+  --accent:       #9c2f3d;
+  --accent-ink:   #7c2432;
+  --accent-soft:  #f2dee0;
+  --code-accent:  #1f6f63;
+  --code-accent-oncode: #3aab95;
+  --code-bg:      #11201c;
+  --code-ink:     #d9ede6;
+  --code-border:  #23372f;
+  --numeral:      #e4e6dd;
+  --shadow:       0 1px 2px rgba(22,29,25,0.04), 0 6px 20px rgba(22,29,25,0.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:        #12140f;
+    --panel:        #191c16;
+    --ink:          #edf0e9;
+    --ink-muted:    #aeb6a9;
+    --ink-faint:    #767f73;
+    --border:       #2c3128;
+    --border-soft:  #23261f;
+    --accent:       #e08691;
+    --accent-ink:   #eda3ac;
+    --accent-soft:  #33201f;
+    --code-accent:  #5fc4b0;
+    --code-bg:      #0c1613;
+    --code-ink:     #cfe9df;
+    --code-border:  #1f342c;
+    --numeral:      #24281f;
+    --shadow:       0 1px 2px rgba(0,0,0,0.2), 0 6px 24px rgba(0,0,0,0.28);
+  }
+}
+:root[data-theme="dark"] {
+  --paper:        #12140f;
+  --panel:        #191c16;
+  --ink:          #edf0e9;
+  --ink-muted:    #aeb6a9;
+  --ink-faint:    #767f73;
+  --border:       #2c3128;
+  --border-soft:  #23261f;
+  --accent:       #e08691;
+  --accent-ink:   #eda3ac;
+  --accent-soft:  #33201f;
+  --code-accent:  #5fc4b0;
+  --code-bg:      #0c1613;
+  --code-ink:     #cfe9df;
+  --code-border:  #1f342c;
+  --numeral:      #24281f;
+  --shadow:       0 1px 2px rgba(0,0,0,0.2), 0 6px 24px rgba(0,0,0,0.28);
+}
+
+* { box-sizing: border-box; }
+html { text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16.5px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--accent-soft); color: var(--accent-ink); }
+a { color: var(--code-accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--code-accent); outline-offset: 2px; }
+
+h1, h2, h3 {
+  font-family: "IBM Plex Serif", Georgia, serif;
+  font-weight: 500;
+  text-wrap: balance;
+  color: var(--ink);
+  line-height: 1.22;
+}
+
+/* ---------- shell layout ---------- */
+.shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+@media (min-width: 1080px) {
+  .shell { grid-template-columns: 232px minmax(0, 760px) 1fr; column-gap: 40px; }
+}
+
+/* ---------- header ---------- */
+.masthead {
+  grid-column: 1 / -1;
+  padding: 56px 0 34px;
+  border-bottom: 1px solid var(--border);
+}
+.eyebrow {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.eyebrow::before {
+  content: "";
+  width: 7px; height: 7px;
+  background: var(--accent);
+  border-radius: 50%;
+  display: inline-block;
+}
+h1.title {
+  font-size: clamp(28px, 4.4vw, 42px);
+  margin: 0 0 14px;
+  max-width: 20ch;
+}
+.dek {
+  font-size: 17px;
+  color: var(--ink-muted);
+  max-width: 62ch;
+  margin: 0 0 28px;
+}
+.stat-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border-top: 1px solid var(--border-soft);
+}
+.stat {
+  padding: 14px 26px 0 0;
+  margin-right: 26px;
+  border-top: 2px solid var(--accent);
+  margin-top: -1px;
+  min-width: 108px;
+}
+.stat:nth-child(2) { border-top-color: var(--code-accent); }
+.stat:nth-child(3) { border-top-color: var(--ink-faint); }
+.stat:nth-child(4) { border-top-color: var(--accent); }
+.stat-num {
+  font-family: "IBM Plex Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 22px;
+  font-weight: 500;
+  display: block;
+}
+.stat-label {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+/* ---------- toc rail ---------- */
+.toc-rail { grid-column: 1; display: none; }
+@media (min-width: 1080px) {
+  .toc-rail { display: block; }
+}
+.toc-inner {
+  position: sticky;
+  top: 32px;
+  padding-top: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.toc-kicker {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 10px;
+}
+.toc-link {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 6px 8px;
+  margin: 0 -8px;
+  border-radius: 5px;
+  font-size: 13.5px;
+  color: var(--ink-muted);
+  text-decoration: none;
+  line-height: 1.35;
+}
+.toc-link:hover { background: var(--border-soft); color: var(--ink); }
+.toc-num {
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--accent);
+  font-size: 12px;
+  min-width: 1.1em;
+}
+
+/* mobile toc strip */
+.toc-strip {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: thin;
+}
+@media (min-width: 1080px) { .toc-strip { display: none; } }
+.toc-strip a {
+  flex: none;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  color: var(--ink-muted);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 5px 12px;
+}
+
+/* ---------- article ---------- */
+.article { grid-column: 2; max-width: 760px; padding: 40px 0 56px; min-width: 0; }
+.article > p:first-child { margin-top: 0; }
+
+.article h2 {
+  font-size: 25px;
+  margin: 3.2em 0 0.7em;
+  padding-left: 52px;
+  position: relative;
+}
+.article > h2:first-of-type { margin-top: 1.4em; }
+.article h2::before {
+  content: attr(data-num);
+  position: absolute;
+  left: -6px;
+  top: -0.16em;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 46px;
+  font-weight: 500;
+  color: var(--numeral);
+  line-height: 1;
+}
+.article h2 code {
+  font-size: 0.72em;
+}
+.article h3 {
+  font-size: 17px;
+  font-style: italic;
+  color: var(--code-accent);
+  margin: 2.4em 0 0.7em;
+}
+.article h3 { font-family: "IBM Plex Serif", serif; }
+
+.article p, .article li { color: var(--ink); }
+.article p { margin: 1.05em 0; max-width: 68ch; }
+.article ul, .article ol { padding-left: 1.3em; margin: 1.05em 0; max-width: 68ch; }
+.article li { margin: 0.45em 0; }
+.article li::marker { color: var(--ink-faint); }
+.article strong { font-weight: 600; }
+.article em { font-style: italic; }
+
+.article :not(pre) > code {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.86em;
+  background: var(--border-soft);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  color: var(--accent-ink);
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 3em 0;
+}
+
+/* ---------- code blocks ---------- */
+.code-cap {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11.5px;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  background: var(--code-bg);
+  color: var(--code-accent-oncode);
+  padding: 9px 16px 0;
+  border: 1px solid var(--code-border);
+  border-bottom: none;
+  border-radius: 9px 9px 0 0;
+  margin: 1.4em 0 0;
+}
+.code-cap-path { color: var(--code-accent-oncode); font-weight: 500; }
+.code-cap-extra { color: #7c9c92; }
+.code-cap + pre {
+  margin-top: 0 !important;
+  border-radius: 0 0 9px 9px !important;
+  border-top: none !important;
+}
+.article pre {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 9px;
+  padding: 14px 16px 16px;
+  overflow-x: auto;
+  margin: 1.4em 0;
+  box-shadow: var(--shadow);
+}
+.article pre code {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12.6px;
+  line-height: 1.6;
+  color: var(--code-ink);
+  background: none;
+  white-space: pre;
+  tab-size: 4;
+}
+
+/* ---------- tables ---------- */
+.article table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.6em 0;
+  font-size: 14.5px;
+}
+.article th {
+  text-align: left;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 500;
+  padding: 0 12px 10px 0;
+  border-bottom: 2px solid var(--accent);
+}
+.article td {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: top;
+  font-variant-numeric: tabular-nums;
+}
+.article table code { white-space: nowrap; }
+
+/* ---------- callouts (caveats) ---------- */
+.callout-list { margin: 1.4em 0; }
+.callout-list ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.callout-list li {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  padding: 14px 18px;
+  box-shadow: var(--shadow);
+  max-width: none;
+}
+
+/* ---------- footer ---------- */
+.colophon {
+  grid-column: 2;
+  max-width: 760px;
+  padding: 0 0 80px;
+  border-top: 1px solid var(--border);
+  padding-top: 26px;
+  font-size: 13px;
+  color: var(--ink-faint);
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.colophon a { color: var(--ink-faint); }
+
+@media (max-width: 1079px) {
+  .article, .colophon { grid-column: 1; }
+}
+</style>
+
+<div class="shell">
+  <header class="masthead">
+    <div class="eyebrow">Methods &middot; computational analysis</div>
+    <h1 class="title">Angiogenesis in relapsed medulloblastoma</h1>
+    <p class="dek">A script-by-script account of the primary-vs-relapse pipeline &mdash; the data model, every statistical test, every parameter choice, and where the gene sets actually came from.</p>
+    <div class="stat-strip">
+      <div class="stat"><span class="stat-num">43</span><span class="stat-label">primary&ndash;relapse pairs</span></div>
+      <div class="stat"><span class="stat-num">55,765</span><span class="stat-label">genes quantified</span></div>
+      <div class="stat"><span class="stat-num">3</span><span class="stat-label">molecular subgroups</span></div>
+      <div class="stat"><span class="stat-num">5</span><span class="stat-label">pipeline scripts</span></div>
+    </div>
+  </header>
+
+  <nav class="toc-strip">
+    <a href="#0-the-question-and-the-constraint" class="toc-link"><span class="toc-num">0</span><span class="toc-label">The question and the constraint</span></a>
+<a href="#1-01_build_metadatapy-building-the-sample-metadata-table" class="toc-link"><span class="toc-num">1</span><span class="toc-label">01_build_metadata.py — building the sample metadata table</span></a>
+<a href="#2-02_load_countspy-normalizing-raw-counts" class="toc-link"><span class="toc-num">2</span><span class="toc-label">02_load_counts.py — normalizing raw counts</span></a>
+<a href="#3-03_analyze_genespy-paired-per-gene-statistics" class="toc-link"><span class="toc-num">3</span><span class="toc-label">03_analyze_genes.py — paired per-gene statistics</span></a>
+<a href="#4-04_make_reportpy-building-the-html-report" class="toc-link"><span class="toc-num">4</span><span class="toc-label">04_make_report.py — building the HTML report</span></a>
+<a href="#5-05_gseapy-pathway-level-analysis-gsea" class="toc-link"><span class="toc-num">5</span><span class="toc-label">05_gsea.py — pathway-level analysis (GSEA)</span></a>
+<a href="#6-known-caveats-and-limitations-collected" class="toc-link"><span class="toc-num">6</span><span class="toc-label">Known caveats and limitations (collected)</span></a>
+  </nav>
+
+  <nav class="toc-rail">
+    <div class="toc-inner">
+      <div class="toc-kicker">Contents</div>
+      <a href="#0-the-question-and-the-constraint" class="toc-link"><span class="toc-num">0</span><span class="toc-label">The question and the constraint</span></a>
+<a href="#1-01_build_metadatapy-building-the-sample-metadata-table" class="toc-link"><span class="toc-num">1</span><span class="toc-label">01_build_metadata.py — building the sample metadata table</span></a>
+<a href="#2-02_load_countspy-normalizing-raw-counts" class="toc-link"><span class="toc-num">2</span><span class="toc-label">02_load_counts.py — normalizing raw counts</span></a>
+<a href="#3-03_analyze_genespy-paired-per-gene-statistics" class="toc-link"><span class="toc-num">3</span><span class="toc-label">03_analyze_genes.py — paired per-gene statistics</span></a>
+<a href="#4-04_make_reportpy-building-the-html-report" class="toc-link"><span class="toc-num">4</span><span class="toc-label">04_make_report.py — building the HTML report</span></a>
+<a href="#5-05_gseapy-pathway-level-analysis-gsea" class="toc-link"><span class="toc-num">5</span><span class="toc-label">05_gsea.py — pathway-level analysis (GSEA)</span></a>
+<a href="#6-known-caveats-and-limitations-collected" class="toc-link"><span class="toc-num">6</span><span class="toc-label">Known caveats and limitations (collected)</span></a>
+    </div>
+  </nav>
+
+  <main class="article">
+    <p>This document explains, script by script, exactly what the code in
+<code>scripts/</code> does and why — the data model, every statistical test, every
+parameter choice, and the caveats. It's meant to let you (or anyone else)
+audit or extend the analysis without re-reading the code line by line. See
+<code>README.md</code> for the short version and the headline findings.</p>
+<h2 id="0-the-question-and-the-constraint">0. The question and the constraint</h2>
+<p>The ask: for the Okonechnikov et al. 2023 medulloblastoma (MB) primary-relapse
+RNA-seq cohort, look at seven specific genes (LRG1, CD74, MIF, EMILIN3, ENG,
+ITGB1, PTK2) and the angiogenesis pathway more broadly, comparing primary vs.
+relapse tumors, split by molecular subgroup (SHH-MB / Group 3 MB / Group 4
+MB), with Group 3 flagged as the priority.</p>
+<p>The two inputs are two plain-text files the user uploaded:</p>
+<ul>
+<li><strong><code>MB_primary_relapse.counts.txt</code></strong> — raw RNA-seq gene counts. 55,765 genes
+  (rows) x 86 samples (columns), tab-separated, sample IDs like <code>MB135076</code> as
+  column headers, gene symbols as row labels.</li>
+<li><strong><code>ps_avgpres_mbffpeb86_mbffpe_..._datagrabber.txt</code></strong> — an export from the
+  R2 Genomics Analysis and Visualization Platform (http://r2.amc.nl), the
+  platform the paper itself names as the host of this dataset
+  ("Tumor Medulloblastoma—Korshunov—86—rpkm—mbffpe"). This file mixes two
+  things in one table: a block of <code>#</code>-prefixed metadata rows at the top
+  (age, subgroup, status, etc., one column per sample) followed by a large
+  block of R2's own normalized expression values (not used here — see
+  §1 for why).</li>
+</ul>
+<p>Neither file alone has both the counts <em>and</em> the sample labels lined up, so
+step 1 is entirely about reconstructing a trustworthy sample→group mapping
+before any statistics happen.</p>
+<h2 id="1-01_build_metadatapy-building-the-sample-metadata-table">1. <code>01_build_metadata.py</code> — building the sample metadata table</h2>
+<p><strong>What it does:</strong> reads the R2 datagrabber file line by line, keeps only
+lines starting with <code>#</code> (R2's convention for an annotation row — data rows
+are gene symbols with no <code>#</code>), and for a fixed allowlist of 15 fields
+(<code>age, death, gender, group, histo, id, mstage, new.cnv, new.mut, pfs,
+relapse, rna_id, status, subgroup, tumorid</code>) captures that row's values
+(skipping the first two columns, which are just the repeated tag name).</p>
+<div class="code-cap"><span class="code-cap-path">scripts/01_build_metadata.py</span><span class="code-cap-extra">lines 10-26</span></div><pre><code class="language-python">fields = [&quot;age&quot;, &quot;death&quot;, &quot;gender&quot;, &quot;group&quot;, &quot;histo&quot;, &quot;id&quot;, &quot;mstage&quot;,
+          &quot;new.cnv&quot;, &quot;new.mut&quot;, &quot;pfs&quot;, &quot;relapse&quot;, &quot;rna_id&quot;, &quot;status&quot;,
+          &quot;subgroup&quot;, &quot;tumorid&quot;]
+
+rows = {}
+with open(META_FILE) as f:
+    for line in f:
+        if not line.startswith(&quot;#&quot;):
+            continue
+        parts = line.rstrip(&quot;\n&quot;).split(&quot;\t&quot;)
+        tag = parts[0].lstrip(&quot;#&quot;)
+        if tag in fields:
+            rows[tag] = parts[2:]  # skip &quot;#tag&quot; and repeated tag col
+
+meta = pd.DataFrame(rows)
+meta[&quot;sample_id&quot;] = meta[&quot;rna_id&quot;].str.upper()
+meta = meta.set_index(&quot;sample_id&quot;)
+</code></pre>
+<p>Each kept row becomes one column of a <code>pandas.DataFrame</code> — i.e. the
+DataFrame ends up <strong>samples × metadata-fields</strong>, indexed by
+<code>sample_id = rna_id.upper()</code> (R2 stores IDs lowercase, e.g. <code>mb103998</code>; the
+counts file uses uppercase, e.g. <code>MB103998</code> — the <code>.upper()</code> is what makes
+the two files joinable at all).</p>
+<p><strong>Why not use R2's own normalized values in that same file?</strong> Two reasons.
+First, the paper's own methods describe deriving RPKM from raw counts
+themselves, not just took R2's already-processed numbers — reproducing that
+from the counts file keeps the analysis under our control (choice of
+normalization, filtering, etc.) rather than opaque to R2's pipeline. Second,
+the R2 export block that follows the metadata rows is ~48,000 gene rows of
+values that hover around 1.0 (e.g. <code>1.02, 1.05, 1.13</code>) — these look like a
+<strong>ratio/fold-change-style scaling</strong> (each gene's value relative to something,
+possibly a reference or the row's own geometric mean), not expression on an
+absolute or log scale. We didn't need to fully reverse-engineer that scale
+because the raw counts file gives us a strictly better starting point:
+ground-truth integer read counts we can normalize ourselves in a way that's
+documented and auditable (§2).</p>
+<p><strong>Sanity check:</strong> the script's last four lines diff the metadata's
+<code>sample_id</code> set against the counts file's column-header set:</p>
+<div class="code-cap"><span class="code-cap-path">scripts/01_build_metadata.py</span><span class="code-cap-extra">lines 35-41</span></div><pre><code class="language-python"># sanity check against counts file header
+with open(COUNTS_FILE) as f:
+    header = f.readline().rstrip(&quot;\n&quot;).split(&quot;\t&quot;)
+counts_ids = set(header)
+meta_ids = set(meta.index)
+print(&quot;in counts not meta:&quot;, counts_ids - meta_ids)
+print(&quot;in meta not counts:&quot;, meta_ids - counts_ids)
+</code></pre>
+<p>Both directions came back empty — <strong>all 86 samples in both files match
+exactly</strong>, case differences aside — which is what let us trust the join for
+everything downstream.</p>
+<p><strong>Output:</strong> <code>results/sample_metadata.csv</code>, 86 rows x 15 columns, indexed by
+sample ID.</p>
+<h3 id="whats-actually-in-the-metadata-as-it-came-out">What's actually in the metadata (as it came out)</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>What it is</th>
+<th>Values seen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>status</code></td>
+<td>primary or relapse</td>
+<td><code>prim</code> (43), <code>recur</code> (43)</td>
+</tr>
+<tr>
+<td><code>group</code></td>
+<td>consensus molecular group</td>
+<td><code>shh</code> (48 samples/24 pairs*), <code>group_4</code> (26/13*), <code>group_3</code> (12/6*)</td>
+</tr>
+<tr>
+<td><code>subgroup</code></td>
+<td>finer 2nd-gen subgroup</td>
+<td><code>shh_inf</code>, <code>ch_ad</code> (SHH split by age); <code>i</code>–<code>viii</code> (Group 3/4)</td>
+</tr>
+<tr>
+<td><code>tumorid</code></td>
+<td>patient pair ID, e.g. <code>pr23</code></td>
+<td>links a <code>prim</code> sample to its <code>recur</code> sample</td>
+</tr>
+<tr>
+<td><code>age</code>, <code>gender</code>, <code>histo</code>, <code>mstage</code>, <code>pfs</code>, <code>death</code>, <code>new.cnv</code>, <code>new.mut</code></td>
+<td>clinical/molecular covariates</td>
+<td>as reported in the paper's Table S1-equivalent</td>
+</tr>
+</tbody>
+</table>
+<p>* Naive per-sample counting within the <code>group</code> column slightly
+undercounts/miscounts pairs — see the switch-pair issue in §5, which is
+handled correctly in the GSEA script but <em>not</em> corrected for in the
+per-gene stats script (a known, documented discrepancy — see §6).</p>
+<h2 id="2-02_load_countspy-normalizing-raw-counts">2. <code>02_load_counts.py</code> — normalizing raw counts</h2>
+<p><strong>What it does:</strong></p>
+<div class="code-cap"><span class="code-cap-path">scripts/02_load_counts.py</span><span class="code-cap-extra">lines 10-22</span></div><pre><code class="language-python">counts = pd.read_csv(COUNTS_FILE, sep=&quot;\t&quot;, index_col=0)
+print(&quot;counts shape:&quot;, counts.shape)
+
+genes_of_interest = [&quot;LRG1&quot;, &quot;CD74&quot;, &quot;MIF&quot;, &quot;EMILIN3&quot;, &quot;ENG&quot;, &quot;ITGB1&quot;, &quot;PTK2&quot;]
+for g in genes_of_interest:
+    print(g, &quot;present:&quot;, g in counts.index)
+
+# CPM + log2 normalization (library-size normalized, standard for raw RNA-seq counts)
+libsize = counts.sum(axis=0)
+cpm = counts.div(libsize, axis=1) * 1e6
+logcpm = np.log2(cpm + 1)
+
+logcpm.to_csv(f&quot;{OUT_DIR}/logcpm_matrix.csv&quot;)
+</code></pre>
+<p>This is standard <strong>library-size normalization</strong> (CPM), then a log2 transform
+with a pseudocount of 1 to handle zeros. It's the simplest normalization that
+makes samples with different sequencing depth (library sizes ranged
+~1.9M–44M reads in this cohort) comparable.</p>
+<p><strong>Why CPM and not the paper's RPKM?</strong> RPKM additionally divides by gene
+length, which matters when comparing <em>different genes'</em> expression levels to
+each other (a long gene will always look more "expressed" than a short one
+in raw counts, purely from having more read-alignment opportunities). Here,
+every comparison is <strong>the same gene, across samples</strong> (primary vs. relapse) —
+gene length is constant within a gene, so it cancels out and doesn't need to
+be corrected for. CPM is sufficient and simpler to reason about.</p>
+<p><strong>Output:</strong> <code>logcpm_matrix.csv</code> (55,765 genes x 86 samples) — this is a large
+derived-but-still-essentially-full-resolution expression matrix, so
+(consistent with not committing the raw counts) <strong>it is not checked into the
+repo</strong>; scripts 03 and 05 both regenerate it by re-running 02, or you can
+keep a local copy alongside the raw counts.</p>
+<h2 id="3-03_analyze_genespy-paired-per-gene-statistics">3. <code>03_analyze_genes.py</code> — paired per-gene statistics</h2>
+<p>This is the core per-gene analysis for the 7 requested genes.</p>
+<p><strong>Composite angiogenesis score:</strong></p>
+<div class="code-cap"><span class="code-cap-path">scripts/03_analyze_genes.py</span><span class="code-cap-extra">lines 12-23</span></div><pre><code class="language-python">genes = [&quot;LRG1&quot;, &quot;CD74&quot;, &quot;MIF&quot;, &quot;EMILIN3&quot;, &quot;ENG&quot;, &quot;ITGB1&quot;, &quot;PTK2&quot;]
+gene_label = {&quot;PTK2&quot;: &quot;PTK2 (FAK)&quot;, &quot;ENG&quot;: &quot;ENG (Endoglin)&quot;}
+
+group_map = {&quot;shh&quot;: &quot;SHH-MB&quot;, &quot;group_3&quot;: &quot;Group 3 MB&quot;, &quot;group_4&quot;: &quot;Group 4 MB&quot;}
+group_order = [&quot;group_3&quot;, &quot;group_4&quot;, &quot;shh&quot;]  # Group 3 first (most important)
+
+expr = logcpm.loc[genes].T  # samples x genes
+expr = expr.join(meta[[&quot;group&quot;, &quot;status&quot;, &quot;tumorid&quot;]])
+
+# z-score each gene across the whole cohort (for the composite angiogenesis score)
+z = (logcpm.loc[genes].T - logcpm.loc[genes].T.mean()) / logcpm.loc[genes].T.std()
+expr[&quot;angio_score&quot;] = z.mean(axis=1)
+</code></pre>
+<p>Each of the 7 genes' logCPM values is z-scored across the <em>whole</em> cohort
+(<code>(x - mean) / sd</code>, all 86 samples), then the 7 z-scores are averaged per
+sample. This gives one number per sample
+that goes up when a sample tends to have high LRG1/CD74/.../PTK2 relative to
+the cohort, and down when it tends to have low values across the panel. It's
+a simple, transparent composite, not a formal gene-set score (contrast with
+GSVA/ssGSEA in §5) — good for "does this sample look angiogenesis-high or
+-low overall" but it treats all 7 genes as equally important, which they are
+not (e.g. MIF's near-zero counts made it contribute mostly noise; see the
+caveat in §6).</p>
+<p><strong>Pairing and statistics, per subgroup:</strong></p>
+<div class="code-cap"><span class="code-cap-path">scripts/03_analyze_genes.py</span><span class="code-cap-extra">lines 28-62</span></div><pre><code class="language-python">for grp in group_order:
+    sub = expr[expr[&quot;group&quot;] == grp]
+    pivot_prim = sub[sub[&quot;status&quot;] == &quot;prim&quot;].set_index(&quot;tumorid&quot;)
+    pivot_recur = sub[sub[&quot;status&quot;] == &quot;recur&quot;].set_index(&quot;tumorid&quot;)
+    common = pivot_prim.index.intersection(pivot_recur.index)
+    n_pairs = len(common)
+
+    for gene in genes + [&quot;angio_score&quot;]:
+        p_vals = pivot_prim.loc[common, gene].values
+        r_vals = pivot_recur.loc[common, gene].values
+        diff = r_vals - p_vals
+        if n_pairs &gt;= 2 and np.any(diff != 0):
+            wstat, wp = stats.wilcoxon(p_vals, r_vals)
+        else:
+            wp = np.nan
+        tstat, tp = stats.ttest_rel(p_vals, r_vals) if n_pairs &gt;= 2 else (np.nan, np.nan)
+
+        records.append({
+            &quot;group&quot;: group_map[grp],
+            &quot;gene&quot;: gene,
+            &quot;n_pairs&quot;: n_pairs,
+            &quot;median_primary&quot;: np.median(p_vals),
+            &quot;median_relapse&quot;: np.median(r_vals),
+            &quot;log2FC_relapse_vs_primary&quot;: np.median(diff),
+            &quot;n_increased_at_relapse&quot;: int(np.sum(diff &gt; 0)),
+            &quot;n_decreased_at_relapse&quot;: int(np.sum(diff &lt; 0)),
+            &quot;paired_ttest_p&quot;: tp,
+            &quot;wilcoxon_p&quot;: wp,
+        })
+
+        paired_data.setdefault(grp, {})[gene] = {
+            &quot;tumorid&quot;: list(common),
+            &quot;primary&quot;: p_vals.tolist(),
+            &quot;relapse&quot;: r_vals.tolist(),
+        }
+</code></pre>
+<p>Step by step:</p>
+<ol>
+<li>Filter to samples in that <code>group</code> (<code>shh</code> / <code>group_3</code> / <code>group_4</code>).</li>
+<li>Split into <code>prim</code> and <code>recur</code>, each indexed by <code>tumorid</code>.</li>
+<li>Take the <strong>intersection</strong> of tumorids present in both — i.e. only
+   complete pairs are kept.</li>
+<li>For each gene (+ the composite score): run</li>
+<li><code>scipy.stats.wilcoxon(primary_values, relapse_values)</code> — the paired
+     <strong>Wilcoxon signed-rank test</strong>. This is a non-parametric test on the
+     paired differences; it doesn't assume the differences are normally
+     distributed, which matters with as few as 5 pairs (Group 3 MB). Guarded
+     against <code>n_pairs &lt; 2</code> and against the all-zero-differences edge case
+     (which <code>scipy.stats.wilcoxon</code> raises on).</li>
+<li><code>scipy.stats.ttest_rel(...)</code> — the paired <strong>t-test</strong>, reported
+     alongside as a parametric cross-check, but Wilcoxon is the primary
+     number reported (more defensible at this sample size).</li>
+<li>Also recorded: median primary, median relapse, median paired difference
+     (<code>log2FC_relapse_vs_primary</code>, a slight misnomer — it's a difference of
+     log2CPM values, i.e. a log2 fold-change, not a linear FC), and a simple
+     count of how many patients went up vs. down at relapse (direction-of-
+     effect sanity check independent of the p-value).</li>
+</ol>
+<p><strong>Why intersection, not the primary-group bucketing used later in
+<code>05_gsea.py</code>?</strong> At the time this script was written, two patient pairs
+(<code>pr26</code>, <code>pr44</code>) hadn't yet been identified as switching molecular group
+between primary and relapse (Group 4 → Group 3). Filtering by <code>group</code> <em>before</em>
+pairing silently drops any tumorid whose primary and relapse samples land in
+different <code>group</code> buckets — which is exactly what happens to those two pairs
+(present in the <code>group_4</code>-filtered <code>prim</code> set, but their <code>recur</code> sample is
+in the <code>group_3</code>-filtered set, so the tumorid never appears in the
+intersection for either group). This under-counts real pairs (n=5 for Group
+3, n=12 for Group 4, instead of the true 6 and 14) but does <strong>not</strong>
+mismatch a primary against the wrong relapse — it's a conservative omission,
+not a correctness bug. See §5 and §6 for how this was later caught and fixed
+for the GSEA analysis, and why it was left as-is here (already-published
+numbers, and the effect of adding 2 more pairs to a already-small n is
+unlikely to change the qualitative picture — but it does mean the two
+n-counts differ between the two analyses, which is worth knowing before
+comparing them directly).</p>
+<p><strong>Outputs:</strong>
+- <code>results/gene_stats_by_subgroup.csv</code> — one row per (subgroup, gene) with
+  all the numbers above.
+- <code>results/paired_data.json</code> — the raw paired values per (subgroup, gene),
+  used by <code>04_make_report.py</code> to draw the slope charts without needing the
+  full expression matrix again.</p>
+<h2 id="4-04_make_reportpy-building-the-html-report">4. <code>04_make_report.py</code> — building the HTML report</h2>
+<p>Pure presentation layer; computes nothing statistical. Two chart types, both
+hand-built as inline SVG (no charting library — keeps the report a single
+self-contained HTML file with no external dependencies, per this session's
+network restrictions and per the practice of keeping published artifacts
+self-contained):</p>
+<p><strong>Paired slope charts</strong> (<code>make_panel</code>): for a given (gene, subgroup), draws
+one dot per sample at x=Primary or x=Relapse, at a y-position scaled to that
+gene's log2CPM range <em>within that panel</em>. The y-scale and the line coloring
+are the core of it:</p>
+<div class="code-cap"><span class="code-cap-path">scripts/04_make_report.py</span><span class="code-cap-extra">lines 41-60</span></div><pre><code class="language-python">    all_vals = np.concatenate([prim, recur])
+    ymin, ymax = all_vals.min(), all_vals.max()
+    span = ymax - ymin
+    if span == 0:
+        span = 1
+    ymin -= span * 0.15
+    ymax += span * 0.15
+
+    def y(v):
+        return PAD_T + INNER_H - (v - ymin) / (ymax - ymin) * INNER_H
+
+    lines = []
+    for pv, rv in zip(prim, recur):
+        yp, yr = y(pv), y(rv)
+        up = yr &lt; yp
+        color = &quot;var(--series-2)&quot; if up else &quot;var(--series-1-muted)&quot;
+        lines.append(
+            f'&lt;line x1=&quot;{X0}&quot; y1=&quot;{yp:.1f}&quot; x2=&quot;{X1}&quot; y2=&quot;{yr:.1f}&quot; '
+            f'stroke=&quot;{color}&quot; stroke-width=&quot;1.4&quot; opacity=&quot;0.75&quot;/&gt;'
+        )
+</code></pre>
+<p>Each small panel uses its own y-axis (<code>ymin</code>/<code>ymax</code> recomputed per gene x
+subgroup, padded 15% for breathing room) — panels are not comparable to each
+other by eye on absolute height, only by their own primary→relapse slope and
+the printed p-value. A line connects each patient's primary dot to their
+relapse dot; the line is colored orange (<code>--series-2</code>) if relapse &gt; primary
+for that patient (note <code>yr &lt; yp</code> because SVG y grows downward), muted blue
+(<code>--series-1-muted</code>) otherwise — so you can see the up/down split at a
+glance before reading the stats table. Group 3 MB panels get a highlighted
+border (<code>highlight=True</code>) since that's the subgroup of most interest:</p>
+<div class="code-cap"><span class="code-cap-path">scripts/04_make_report.py</span><span class="code-cap-extra">lines 89-94</span></div><pre><code class="language-python">for gene in genes + [&quot;angio_score&quot;]:
+    label = &quot;Composite angiogenesis-gene score (mean z-score)&quot; if gene == &quot;angio_score&quot; else f'{gene_label.get(gene, gene)}'
+    panels = &quot;&quot;.join(
+        make_panel(gene, grp, highlight=(grp == &quot;group_3&quot;))
+        for grp in group_order
+    )
+</code></pre>
+<p><strong>GSEA bar chart</strong>: one horizontal bar per (subgroup, gene set), bar length
+= NES (normalized enrichment score, see §5), color = gene set identity
+(3-color categorical palette), full opacity if FDR q-value &lt; 0.05, faded
+otherwise:</p>
+<div class="code-cap"><span class="code-cap-path">scripts/04_make_report.py</span><span class="code-cap-extra">lines 127-144</span></div><pre><code class="language-python">for grp in grp_display_order:
+    bars.append(f'&lt;text x=&quot;4&quot; y=&quot;{y - 6}&quot; class=&quot;gsea-group-label&quot;&gt;{grp}&lt;/text&gt;')
+    for i, term in enumerate(term_order):
+        row = gsea_df[(gsea_df[&quot;group&quot;] == grp) &amp; (gsea_df[&quot;Term&quot;] == term)]
+        if row.empty:
+            y += row_h
+            continue
+        r = row.iloc[0]
+        nes = r[&quot;NES&quot;]
+        fdr = r[&quot;FDR q-val&quot;]
+        bx = x_scale(min(nes, 0))
+        bw = abs(x_scale(nes) - zero_x)
+        sig = fdr &lt; 0.05
+        opacity = &quot;1&quot; if sig else &quot;0.45&quot;
+        bars.append(
+            f'&lt;rect x=&quot;{bx:.1f}&quot; y=&quot;{y-9:.1f}&quot; width=&quot;{bw:.1f}&quot; height=&quot;14&quot; rx=&quot;3&quot; '
+            f'fill=&quot;{series_colors[i]}&quot; opacity=&quot;{opacity}&quot;/&gt;'
+        )
+</code></pre>
+<p>Bars are drawn from the zero-line outward in whichever direction <code>nes</code> sign
+points (<code>bx = x_scale(min(nes, 0))</code> picks the left edge whether <code>nes</code> is
+positive or negative), so a vertical zero-line anchors all of them and
+direction (toward primary vs. toward relapse) is visually obvious.</p>
+<p><strong>Design-system notes:</strong> color roles and CSS custom properties follow the
+<code>dataviz</code> skill's palette (<code>--series-1/2/3</code>, validated with
+<code>validate_palette.js</code> for colorblind-safety in both light and dark mode —
+the 3-color set passes with one WARN, a light-mode contrast shortfall on the
+green series, mitigated by every bar already carrying a direct text label,
+which is the skill's prescribed relief for that warning). Both a
+<code>prefers-color-scheme</code> media query and a <code>[data-theme]</code> override are defined
+so the report matches the viewer's OS/app theme.</p>
+<p><strong>Output:</strong> <code>results/report.html</code>, also published as a Claude Artifact
+(this is the URL shared in conversation) for interactive viewing.</p>
+<h2 id="5-05_gseapy-pathway-level-analysis-gsea">5. <code>05_gsea.py</code> — pathway-level analysis (GSEA)</h2>
+<p>This is the part that asks "is angiogenesis <em>as a pathway</em> shifted at
+relapse", rather than just "are these 7 particular genes shifted".</p>
+<h3 id="5a-gene-sets-used-and-how-they-were-sourced">5a. Gene sets used, and how they were sourced</h3>
+<p>This session's network egress is allowlisted (pypi, npm, github, a few
+others) and explicitly <strong>blocks</strong> arbitrary hosts including
+<code>gsea-msigdb.org</code> and <code>maayanlab.cloud</code> (Enrichr) — both attempts returned
+HTTP 403 from the egress proxy as a policy denial, not a transient failure.
+So the standard "download the .gmt from MSigDB" path wasn't available.</p>
+<p>Instead: <code>raw.githubusercontent.com</code> <strong>is</strong> reachable (GitHub is in the
+allowlist), so a GitHub code search for the known MSigDB filename
+<code>h.all.v2023.1.Hs.symbols.gmt</code> was used. This is the official filename Broad
+ships for Hallmark v2023.1. Four independent, unrelated public repositories
+were found to contain a file with that exact name — and critically, <strong>all
+four had the identical git blob SHA</strong> (<code>450d222224c9d93f310888eb52fc7408d6118ffe</code>).
+Independent repos landing on byte-identical content for a file with the
+official release name is strong circumstantial evidence it's an unmodified
+copy of the real Broad Institute release, not a hand-edited approximation —
+this is the basis for calling <code>HALLMARK_ANGIOGENESIS</code> (extracted from that
+file) "verified" rather than "curated." As it's actually hardcoded in the
+script (all three gene sets are, since none could be downloaded at runtime):</p>
+<div class="code-cap"><span class="code-cap-path">scripts/05_gsea.py</span><span class="code-cap-extra">lines 15-27</span></div><pre><code class="language-python">HALLMARK_ANGIOGENESIS = [&quot;VCAN&quot;, &quot;POSTN&quot;, &quot;FSTL1&quot;, &quot;LRPAP1&quot;, &quot;STC1&quot;, &quot;LPL&quot;, &quot;VEGFA&quot;, &quot;PF4&quot;,
+    &quot;THBD&quot;, &quot;FGFR1&quot;, &quot;TNFRSF21&quot;, &quot;CCND2&quot;, &quot;COL5A2&quot;, &quot;ITGAV&quot;, &quot;SERPINA5&quot;, &quot;KCNJ8&quot;, &quot;APP&quot;,
+    &quot;JAG1&quot;, &quot;COL3A1&quot;, &quot;SPP1&quot;, &quot;NRP1&quot;, &quot;OLR1&quot;, &quot;PDGFA&quot;, &quot;PTK2&quot;, &quot;SLCO2A1&quot;, &quot;PGLYRP1&quot;, &quot;VAV2&quot;,
+    &quot;S100A4&quot;, &quot;MSX1&quot;, &quot;VTN&quot;, &quot;TIMP1&quot;, &quot;APOH&quot;, &quot;PRG2&quot;, &quot;JAG2&quot;, &quot;LUM&quot;, &quot;CXCL6&quot;]
+
+CURATED_ANGIOGENESIS_SUPPLEMENTARY = [&quot;VEGFA&quot;, &quot;VEGFB&quot;, &quot;VEGFC&quot;, &quot;VEGFD&quot;, &quot;KDR&quot;, &quot;FLT1&quot;,
+    &quot;FLT4&quot;, &quot;NRP1&quot;, &quot;NRP2&quot;, &quot;PDGFA&quot;, &quot;PDGFB&quot;, &quot;FGF1&quot;, &quot;FGF2&quot;, &quot;ANGPT1&quot;, &quot;ANGPT2&quot;, &quot;TEK&quot;,
+    &quot;TIE1&quot;, &quot;THBS1&quot;, &quot;SERPINE1&quot;, &quot;MMP2&quot;, &quot;MMP9&quot;, &quot;TIMP1&quot;, &quot;TIMP2&quot;, &quot;TIMP3&quot;, &quot;COL18A1&quot;,
+    &quot;COL4A2&quot;, &quot;SPP1&quot;, &quot;VTN&quot;, &quot;ITGAV&quot;, &quot;ITGB3&quot;, &quot;CDH5&quot;, &quot;PECAM1&quot;, &quot;MCAM&quot;, &quot;VCAM1&quot;, &quot;SELP&quot;,
+    &quot;CXCL8&quot;, &quot;CXCL12&quot;, &quot;CCL2&quot;, &quot;LPL&quot;, &quot;PLAU&quot;, &quot;PLAUR&quot;, &quot;NOS3&quot;, &quot;HIF1A&quot;, &quot;EPAS1&quot;, &quot;ACVRL1&quot;,
+    &quot;ENG&quot;, &quot;TGFBR1&quot;, &quot;SMAD4&quot;, &quot;EFNB2&quot;, &quot;EPHB4&quot;, &quot;ROBO4&quot;]
+
+USER_PANEL = [&quot;LRG1&quot;, &quot;CD74&quot;, &quot;MIF&quot;, &quot;EMILIN3&quot;, &quot;ENG&quot;, &quot;ITGB1&quot;, &quot;PTK2&quot;]
+</code></pre>
+<p>A second attempt was made to find the GO Biological Process term
+<code>GOBP_ANGIOGENESIS</code> (GO:0001525) the same way, but GitHub code search
+doesn't index files above a size threshold, and the full GO BP <code>.gmt</code>
+collection is too large — no hit. A single repo did turn up a
+<code>go_biological_process.json</code> containing a <code>GOBP_ANGIOGENESIS</code> key with ~50
+genes, but every gene set in that file is suspiciously round (~48-50 genes
+each) compared to real GO Biological Process terms (the true
+<code>GOBP_ANGIOGENESIS</code> has 300+ genes) — this looks like a hand-abbreviated or
+LLM-generated approximation, not the authoritative term. It's kept in the
+analysis as <code>CURATED_ANGIOGENESIS_SUPPLEMENTARY</code> and <strong>explicitly labeled
+"lower confidence"</strong> everywhere it's reported (script comments, README, HTML
+report legend) rather than presented as equivalent to the Hallmark set.</p>
+<p>The third gene set, <code>USER_ANGIOGENESIS_PANEL</code>, is just the 7 genes originally
+requested, tested as its own mini gene-set so its pathway-level behavior as
+a unit can be compared against the two more general sets.</p>
+<h3 id="5b-the-switch-pair-fix">5b. The switch-pair fix</h3>
+<p><code>meta[meta["group"] == grp]</code>-style filtering (as used in script 03) drops
+the 2 patients whose tumor switched Group 4 → Group 3 between primary and
+relapse. This script fixes that: it first pairs samples <strong>globally by
+<code>tumorid</code></strong> (ignoring <code>group</code> entirely), then decides which subgroup bucket
+each <em>pair</em> belongs to using <strong>the primary sample's <code>group</code> label</strong>:</p>
+<div class="code-cap"><span class="code-cap-path">scripts/05_gsea.py</span><span class="code-cap-extra">lines 47-58</span></div><pre><code class="language-python">prim_all = meta[meta[&quot;status&quot;] == &quot;prim&quot;]
+recur_all = meta[meta[&quot;status&quot;] == &quot;recur&quot;]
+pair_group = prim_all.set_index(&quot;tumorid&quot;)[&quot;group&quot;]
+
+all_results = []
+for grp in group_order:
+    tumorids = pair_group[pair_group == grp].index
+    prim_sub = prim_all[prim_all[&quot;tumorid&quot;].isin(tumorids)].sort_values(&quot;tumorid&quot;)
+    recur_sub = recur_all[recur_all[&quot;tumorid&quot;].isin(tumorids)].sort_values(&quot;tumorid&quot;)
+    prim_ids = prim_sub.index
+    recur_ids = recur_sub.index
+    assert (prim_sub[&quot;tumorid&quot;].values == recur_sub[&quot;tumorid&quot;].values).all()
+</code></pre>
+<p>This recovers all 43 pairs with none dropped — Group 4 MB ends up with the
+correct n=14 (not n=12 as in script 03's output) and Group 3 MB is
+unaffected here (its "extra" pair going <em>out</em> to Group 4's relapse-only side
+is exactly cancelled by pairing on the primary side). The <code>assert</code> confirms
+every bucketed pair's primary and relapse rows share the same <code>tumorid</code>
+(after both are independently <code>sort_values("tumorid")</code>-ed, so row <em>i</em> of
+<code>prim_sub</code> and row <em>i</em> of <code>recur_sub</code> are guaranteed to be the same patient)
+before any stats are computed — a silent mismatch would fail loudly rather
+than produce wrong numbers quietly.</p>
+<h3 id="5c-expression-filtering">5c. Expression filtering</h3>
+<div class="code-cap"><span class="code-cap-path">scripts/05_gsea.py</span><span class="code-cap-extra">lines 39-41</span></div><pre><code class="language-python">expressed = logcpm.index[logcpm.mean(axis=1) &gt; 1]
+logcpm_f = logcpm.loc[expressed]
+print(f&quot;genes after expression filter: {logcpm_f.shape[0]} / {logcpm.shape[0]}&quot;)
+</code></pre>
+<p>Before ranking, genes are filtered to <code>mean(logCPM) &gt; 1</code> across all 86
+samples (≈ mean CPM &gt; 1) — 16,225 of the original 55,765 genes survive. This
+removes genes that are essentially unexpressed cohort-wide, whose paired
+t-statistics would otherwise be dominated by noise (a gene that's 0 counts in
+84 samples and 1–2 counts in two samples can produce an enormous, meaningless
+t-statistic). This is also <em>why</em> MIF and one other of the 7 user genes drop
+out of <code>USER_ANGIOGENESIS_PANEL</code>'s effective size (reported "Tag %" denominators
+of 5, not 7, in the GSEA output) — consistent with the MIF caveat in §6.</p>
+<h3 id="5d-ranking-metric-and-the-gsea-run-itself">5d. Ranking metric and the GSEA run itself</h3>
+<p>For each subgroup, for every surviving gene: a <strong>paired t-statistic</strong> is
+computed by hand (not via <code>scipy.stats.ttest_rel</code>, for speed across 16k
+genes at once — but it's the same formula):</p>
+<div class="code-cap"><span class="code-cap-path">scripts/05_gsea.py</span><span class="code-cap-extra">lines 60-68 (inside `for grp in group_order:`)</span></div><pre><code class="language-python">    p = logcpm_f[prim_ids].values
+    r = logcpm_f[recur_ids].values
+    diff = r - p
+    n = diff.shape[1]
+    mean_diff = diff.mean(axis=1)
+    sd_diff = diff.std(axis=1, ddof=1)
+    sd_diff[sd_diff == 0] = np.nan
+    tstat = mean_diff / (sd_diff / np.sqrt(n))
+    rnk = pd.Series(tstat, index=logcpm_f.index).dropna().sort_values(ascending=False)
+</code></pre>
+<p>(<code>sd_diff == 0 -&gt; NaN</code> guards genes with zero variance in their paired
+differences, e.g. identical values across every patient, which would
+otherwise divide by zero; <code>.dropna()</code> then drops those genes from the
+ranking entirely rather than assigning them a spurious infinite t-stat.)</p>
+<p>Genes are ranked by this signed t-statistic, most-positive (consistently up
+at relapse) at the top, most-negative (consistently up at primary) at the
+bottom — this ranked list is what "preranked GSEA" runs on (as opposed to
+"a priori GSEA," which computes the ranking from raw expression and phenotype
+labels together; using a paired statistic as the ranking metric is the
+standard adaptation for a paired/matched design, analogous to how the
+original paper used limma with patient-pair blocking to call its DEGs).</p>
+<p><code>gseapy.prerank</code> (a Python port of the Broad's GSEA algorithm) is then run
+against the three gene sets simultaneously, per subgroup:</p>
+<div class="code-cap"><span class="code-cap-path">scripts/05_gsea.py</span><span class="code-cap-extra">lines 72-82 (inside `for grp in group_order:`)</span></div><pre><code class="language-python">    pre_res = gp.prerank(
+        rnk=rnk,
+        gene_sets=gene_sets,
+        min_size=3,
+        max_size=2000,
+        permutation_num=1000,
+        outdir=None,
+        seed=42,
+        verbose=False,
+    )
+    res = pre_res.res2d.copy()
+</code></pre>
+<ul>
+<li><code>min_size=3, max_size=2000</code> — a gene set needs at least 3 of its genes
+  present in the ranked list to be scored at all (relevant for
+  <code>USER_ANGIOGENESIS_PANEL</code> after filtering — it still clears this easily).</li>
+<li><code>permutation_num=1000</code> — the null distribution for the p-value/NES is
+  built from 1000 gene-set permutations (this is the standard GSEA
+  permutation-based significance test, not a parametric approximation).</li>
+<li><code>seed=42</code> — fixed for reproducibility of the permutation-based p-values.</li>
+<li><code>outdir=None</code> — keeps <code>gseapy</code> from writing its own plots/report files to
+  disk; only the in-memory <code>res2d</code> table is kept and written out ourselves
+  as <code>gsea_angiogenesis_results.csv</code>.</li>
+</ul>
+<p><strong>Output per (subgroup, gene set):</strong> <code>NES</code> (normalized enrichment score —
+positive means the gene set's members skew toward the "up at relapse" end of
+the ranking; magnitude reflects how strongly, normalized so it's comparable
+across gene sets of different sizes), <code>NOM p-val</code> (nominal, from the
+permutation null), <code>FDR q-val</code> (multiple-testing-corrected across the gene
+sets tested), and <code>Tag %</code> (what fraction of the gene set's members actually
+appear in the leading edge driving the enrichment).</p>
+<p>Also saved as a side artifact: <code>results/rank_&lt;group&gt;.rnk</code> — wait, these
+<code>.rnk</code> files are written to the results directory by the script but are
+per-run scratch (regenerable from <code>logcpm_matrix.csv</code> + <code>sample_metadata.csv</code>
+by re-running this script) and are not committed, same reasoning as the
+logCPM matrix.</p>
+<p><strong>Output:</strong> <code>results/gsea_angiogenesis_results.csv</code> — one row per
+(subgroup, gene set).</p>
+<h2 id="6-known-caveats-and-limitations-collected">6. Known caveats and limitations (collected)</h2>
+<div class="callout-list"><ul>
+<li><strong>MIF is unreliable.</strong> Raw counts for MIF are near-zero (single digits) in
+  almost all 86 samples, despite MIF normally being a moderately-to-highly
+  expressed gene. The paper's own counting pipeline uses
+  "uniquely mapped reads only" (their Methods section); MIF has several
+  processed pseudogenes elsewhere in the genome, so reads that would
+  otherwise support MIF's true expression are likely discarded as
+  multi-mapping. This isn't a bug in this analysis — it's inherited from how
+  the underlying counts were generated — but it means MIF's specific
+  per-gene result (§3) and its contribution to the composite score and to
+  <code>USER_ANGIOGENESIS_PANEL</code> should be discounted.</li>
+<li><strong>Group 3 MB is underpowered.</strong> 5–6 pairs is not much for a paired
+  Wilcoxon test or for GSEA's permutation null; several "trend but not
+  significant" results in Group 3 (notably ITGB1, p=0.06, 5/5 patients up;
+  and the GSEA NES for Hallmark Angiogenesis, p=0.067) are consistent
+  directionally with the significant findings in the larger subgroups but
+  shouldn't be over-interpreted as null results — they're likely a power
+  problem, not an absence of effect.</li>
+<li><strong>n mismatch between script 03 and script 05 for Group 3/Group 4.</strong> See
+  §3 and §5b — script 03 reports n=5 (Group 3) / n=12 (Group 4) from
+  intersection-after-filtering; script 05 correctly recovers n=6 / n=14 by
+  pairing on <code>tumorid</code> first. Both are legitimate, just answering slightly
+  different bucketing questions; don't directly compare an n across the two
+  outputs without accounting for this.</li>
+<li><strong><code>CURATED_ANGIOGENESIS_SUPPLEMENTARY</code> is not an authoritative GO term</strong> —
+  see §5a. Treat any result attributed to it as a secondary, lower-confidence
+  read, not equivalent in evidentiary weight to the verified Hallmark set.</li>
+<li><strong>CPM, not RPKM</strong> — see §2. Fine for the paired same-gene comparisons made
+  here; would need gene-length correction if this matrix were later reused
+  to compare different genes' expression levels to each other.</li>
+<li><strong>Composite angiogenesis score (§3) is an unweighted mean of z-scores</strong>,
+  not a formal gene-set enrichment score like GSVA/ssGSEA — it's a quick
+  per-sample summary of the 7 requested genes specifically, distinct from
+  (and complementary to) the GSEA results in §5, which score gene sets
+  against the whole ranked transcriptome.</li>
+<li><strong>Raw sequencing data is intentionally not committed to this repo</strong> — see
+  <code>README.md</code>. Anyone re-running the pipeline needs their own local copies of
+  the two source files pointed to via the <code>MB_META_FILE</code> / <code>MB_COUNTS_FILE</code>
+  environment variables (see the top of <code>01_build_metadata.py</code> and
+  <code>02_load_counts.py</code>).</li>
+</ul></div>
+  </main>
+
+  <footer class="colophon">
+    <span>Okonechnikov et al. 2023, <em>Acta Neuropathologica Communications</em> 11:7 &mdash; source cohort</span>
+    <span>analyses/mb-primary-relapse/METHODS.md</span>
+  </footer>
+</div>
+<script>
+document.querySelectorAll('.article h2[id]').forEach(function (h) {
+  var m = h.textContent.match(/^(\d+[a-z]?)\./);
+  if (m) h.setAttribute('data-num', m[1]);
+});
+</script>
