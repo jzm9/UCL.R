@@ -648,7 +648,112 @@ tumour <- AddModuleScore(tumour, features = list(hallmark_angio),
 
 ---
 
-## 9. Overall summary of best-practice gaps
+## 9. Follow-up: cluster-defined tumour re-analysis, and findings
+
+After the CopyKAT contamination issue (§5) was identified, a second, local-only
+re-analysis was run (`R/downstream_analysis/rerun_gsea_cluster_based_tumour.R`)
+replacing CopyKAT's `is_tumour` call with a manual tumour definition based on
+all-cells clusters 0, 1, 3, 4, 6, 15 (cluster 14 was tested and excluded — its
+real top-10 markers, `Tsix`/`Gm26917`/`Gria2`/`Miat`/`Gm42418`/`Xist`/
+`Kcnq1ot1`/`Sacs`/`C130071C03Rik`/`Nav2`, contain no tumour-lineage marker and
+are dominated by sex-chromosome/imprinted lncRNAs plus `Gm42418`, a
+non-specific rRNA-repeat transcript commonly seen as a technical artifact in
+mouse scRNA-seq).
+
+### 9.1 Findings
+
+- **`HALLMARK_TNFA_SIGNALING_VIA_NFKB`** was the single strongest, cleanest
+  result: padj ≈ 0.0008, surviving full correction across ~1569 tested
+  pathways. This is the primary finding to lead with, subject to checking its
+  leading-edge genes aren't dominated by classic dissociation-stress markers
+  (`Fos`/`Jun`/`Hspa1a/b`) rather than genuine cytokine-signalling genes
+  (`Tnf`/`Il1b`/`Cxcl1/2`) before presenting it as biology rather than a
+  sample-handling artifact.
+- **A large, coordinated translation/ribosome/mitochondrial-translation/OXPHOS
+  signal** (`KEGG_RIBOSOME`, `REACTOME_TRANSLATION`,
+  `REACTOME_MITOCHONDRIAL_TRANSLATION`, `HALLMARK_OXIDATIVE_PHOSPHORYLATION`,
+  and related sets — several with padj down to ~1e-7) was the statistically
+  strongest signal in the whole genome-wide GSEA, all in the same direction
+  (down in MET relative to Primary). This pattern is a well-known signature of
+  a technical sequencing-depth/RNA-quality confound rather than necessarily
+  real biology, so a follow-up check was run.
+- **No angiogenesis/VEGF/HIF/hypoxia/Notch pathway reached significance**
+  in this cluster-defined tumour object (closest: `HALLMARK_HYPOXIA`,
+  padj ≈ 0.31) — a stable, reproducible negative result, consistent across
+  both the CopyKAT-based and cluster-defined tumour definitions (the
+  CopyKAT-based version showed a weaker directional trend that did not
+  survive correction either). This should be reported as a genuine negative
+  finding, not omitted.
+
+### 9.2 Sequencing-depth confound check
+
+Per-sample median `nCount_RNA`/`nFeature_RNA` were compared MET vs Primary,
+paired by patient:
+
+| Patient | Δ median nCount (MET − Primary) | Δ median nFeature |
+|---|---|---|
+| 1 | +4591 | +1421 |
+| 2 | **−4417** | **−1240** |
+| 3 | +8893 | +1552 |
+| 4 | +1207 | +303 |
+
+3 of 4 patients show higher depth/complexity in MET, but patient 2 reverses
+the pattern entirely. This is not the clean, unanimous, large shift that
+would definitively explain the translation/ribosome/OXPHOS signal as pure
+artifact — but with one clear reversal among 4 pairs, and given the paired
+Wilcoxon statistical floor at this n (§6), the depth confound **cannot be
+ruled out either**. The honest position is to report the translation/
+ribosome finding as a secondary, hypothesis-generating result with this
+ambiguity stated explicitly, not to present it as confirmed biology or to
+discard it outright.
+
+A related, independent observation from the same check: cell yield per
+sample after clustering/QC ranged from 373 to 4690 cells (12-fold), with the
+lowest-yield sample (`LPT_MET_3`) also showing the highest per-cell median
+count — an unusual combination worth independently verifying (real
+biological outlier vs. an upstream QC/filtering artifact specific to that
+sample). Since `AggregateExpression()` weights every sample equally in the
+downstream pseudobulk DESeq2 model regardless of how many cells built it,
+very-low-yield samples contribute noisier pseudobulk estimates without that
+uncertainty being reflected in the reported p-values.
+
+### 9.3 Why this dataset has structural limitations for this kind of analysis
+
+- **n=4 matched pairs is a hard ceiling.** A paired Wilcoxon test cannot
+  produce a two-sided p-value below 0.125 at this n regardless of true
+  effect size, and DESeq2's per-gene dispersion estimates are inherently
+  noisier with only 4 replicates per group — both directly explain why so
+  few individual results survive correction even where a real signal may
+  exist, and why any single pair's behaviour (e.g. patient 2's reversed
+  depth pattern) carries outsized influence on paired tests.
+- **Highly uneven cell yield per sample** (373–4690 cells) means pseudobulk
+  "replicates" are not equally well-estimated, despite being weighted
+  equally in the DE model — a structural limitation of pseudobulk analysis
+  on unevenly-recovered single-cell data.
+- **No ground-truth tumour/TME boundary.** CopyKAT is inference, not
+  measurement, and the cluster-based correction used here is a better but
+  still judgement-based alternative (the cluster 14 inclusion/exclusion
+  decision is a direct example) — no orthogonal validation (spatial data,
+  FACS, genotyping) exists in this dataset to confirm either approach.
+- **No recorded batch/processing metadata** (dissociation timing, processing
+  date/batch) to formally rule confounds like the depth-QC finding above in
+  or out — only proxies (like the depth check itself) are available.
+- **Single dataset, no replication cohort.** All findings here are properly
+  hypothesis-generating, not confirmatory, absent independent validation
+  (qPCR, IHC, or a second patient cohort).
+- **Mouse model.** Findings reflect this specific mouse medulloblastoma
+  leptomeningeal metastasis model; translation to human disease requires
+  independent confirmation regardless of internal result strength.
+
+None of this invalidates the analysis — it means every finding above should
+be framed with appropriate hedging ("suggestive of," "hypothesis-generating,"
+"warrants validation") rather than presented as settled, and these
+limitations are worth stating explicitly in any write-up rather than left
+implicit.
+
+---
+
+## 10. Overall summary of best-practice gaps
 
 Ranked roughly by how much each affects the reliability of the biological
 conclusions:
