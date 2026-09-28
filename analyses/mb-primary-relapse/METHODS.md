@@ -262,8 +262,8 @@ pairing silently drops any tumorid whose primary and relapse samples land in
 different `group` buckets — which is exactly what happens to those two pairs
 (present in the `group_4`-filtered `prim` set, but their `recur` sample is
 in the `group_3`-filtered set, so the tumorid never appears in the
-intersection for either group). This under-counts real pairs (n=5 for Group
-3, n=12 for Group 4, instead of the true 6 and 14) but does **not**
+intersection for either group). This under-counts Group 4 (n=12 instead of the true 14; Group 3's
+n=5 is correct, since both switch pairs have Group 4 primaries) but does **not**
 mismatch a primary against the wrong relapse — it's a conservative omission,
 not a correctness bug. See §5 and §6 for how this was later caught and fixed
 for the GSEA analysis, and why it was left as-is here (already-published
@@ -465,9 +465,9 @@ for grp in group_order:
 ```
 
 This recovers all 43 pairs with none dropped — Group 4 MB ends up with the
-correct n=14 (not n=12 as in script 03's output) and Group 3 MB is
-unaffected here (its "extra" pair going *out* to Group 4's relapse-only side
-is exactly cancelled by pairing on the primary side). The `assert` confirms
+correct n=14 (not n=12 as in script 03's output) and Group 3 MB stays at
+n=5 (both switch pairs have Group 4 primaries, so under primary-group
+bucketing they belong to Group 4). The `assert` confirms
 every bucketed pair's primary and relapse rows share the same `tumorid`
 (after both are independently `sort_values("tumorid")`-ed, so row *i* of
 `prim_sub` and row *i* of `recur_sub` are guaranteed to be the same patient)
@@ -582,8 +582,9 @@ logCPM matrix.
   the underlying counts were generated — but it means MIF's specific
   per-gene result (§3) and its contribution to the composite score and to
   `USER_ANGIOGENESIS_PANEL` should be discounted.
-- **Group 3 MB is underpowered.** 5–6 pairs is not much for a paired
-  Wilcoxon test or for GSEA's permutation null; several "trend but not
+- **Group 3 MB is underpowered.** 5 pairs is not much for a paired
+  Wilcoxon test (with n=5 the smallest achievable two-sided p is 0.0625,
+  so p<0.05 is impossible even when all 5 patients move the same way) or for GSEA's permutation null; several "trend but not
   significant" results in Group 3 (notably ITGB1, p=0.06, 5/5 patients up;
   and the GSEA NES for Hallmark Angiogenesis, p=0.067) are consistent
   directionally with the significant findings in the larger subgroups but
@@ -591,7 +592,7 @@ logCPM matrix.
   problem, not an absence of effect.
 - **n mismatch between script 03 and script 05 for Group 3/Group 4.** See
   §3 and §5b — script 03 reports n=5 (Group 3) / n=12 (Group 4) from
-  intersection-after-filtering; script 05 correctly recovers n=6 / n=14 by
+  intersection-after-filtering; script 05 correctly recovers n=5 / n=14 by
   pairing on `tumorid` first. Both are legitimate, just answering slightly
   different bucketing questions; don't directly compare an n across the two
   outputs without accounting for this.

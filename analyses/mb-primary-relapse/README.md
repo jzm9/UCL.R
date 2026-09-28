@@ -44,6 +44,14 @@ needed to reproduce the derived results below.
    for each gene x subgroup, plus the GSEA bar chart. Also published as a
    Claude artifact.
 
+6. `scripts/06_edn1_endothelin.py` — follow-up on EDN1 and its receptors
+   (EDNRA, EDNRB): paired primary-vs-relapse tests per subgroup (pairs
+   bucketed by primary group, as in 05), an endothelial marker score
+   (CDH5/KDR/VWF/CLDN5/ESAM; PECAM1 is absent from this annotation), EDN1
+   adjusted for that score, and EDN1's correlation with vascular/hypoxia
+   genes -> `results/edn1_paired_by_subgroup.csv`,
+   `results/edn1_correlations.csv`
+
 ## Key findings
 
 - **ITGB1** is up at relapse consistently across all three subgroups
@@ -53,6 +61,12 @@ needed to reproduce the derived results below.
   toward relapse in **Group 4 MB** (NES 2.08, FDR<0.001) and **SHH-MB**
   (NES 1.53, FDR=0.038), with the same positive direction (not significant,
   small n=5) in **Group 3 MB**.
+- **EDN1** is up at relapse in **SHH-MB** (16/24 pairs, p=0.021), together
+  with both receptors (EDNRA p=0.025, EDNRB p=0.023), and still after
+  adjusting for endothelial content (p=0.046). No consistent change in Group
+  3 (2 up / 3 down) or Group 4. Nominal, uncorrected p-values.
+- **LRG1** is barely expressed (median ~0.06 CPM) and excluded from GSEA by
+  the expression filter.
 - **MIF** raw counts are near-zero in almost all samples — likely a
   quantification artifact (uniquely-mapped-reads-only counting undercounts MIF
   due to its processed pseudogenes) — treat that gene's result as unreliable.
