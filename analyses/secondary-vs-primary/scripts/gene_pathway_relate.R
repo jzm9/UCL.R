@@ -16,7 +16,7 @@ le <- fread("../results/leading_edges_top_pathways.csv")
 up_sec  <- le[group == "TOP_UP_IN_SECONDARY"]
 up_prim <- le[group == "TOP_UP_IN_PRIMARY"]
 
-build_matrix <- function(pathway_tbl, rank_col, top_n_genes = 30) {
+build_matrix <- function(pathway_tbl, rank_col, top_n_genes = 50) {
   top_genes <- de[order(if (rank_col == "rank_secondary") rank_secondary else rank_primary)][1:top_n_genes, gene]
   mat <- matrix(0L, nrow = length(top_genes), ncol = nrow(pathway_tbl),
                 dimnames = list(top_genes, pathway_tbl$pathway))
